@@ -150,6 +150,7 @@ export function ActiveSession({ id }: { id: string }) {
 
       {noteOpen && (
         <div className="session-note">
+          <SessionTimes session={session} />
           <textarea
             rows={2}
             defaultValue={session.note}
@@ -518,6 +519,65 @@ function pick(v: Vals, fields: string[]): Vals {
     if (v[k] !== undefined && v[k] !== null) out[k] = v[k]
   }
   return out
+}
+
+const hhmm = (ts: number) => {
+  const d = new Date(ts)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+/** timestamp on the same day as `day` at "HH:MM" */
+const atTime = (day: number, v: string) => {
+  const [h, m] = v.split(':').map(Number)
+  const d = new Date(day)
+  d.setHours(h, m, 0, 0)
+  return d.getTime()
+}
+
+/** Start (left) and end (right) time of the session, shown above the session note. */
+function SessionTimes({ session }: { session: Session }) {
+  const [start, setStart] = useState(hhmm(session.startedAt))
+  const [end, setEnd] = useState(session.endedAt ? hhmm(session.endedAt) : '')
+  useEffect(() => setStart(hhmm(session.startedAt)), [session.startedAt])
+  useEffect(() => setEnd(session.endedAt ? hhmm(session.endedAt) : ''), [session.endedAt])
+
+  return (
+    <div className="session-times">
+      <label>
+        <span className="muted small">{t('session.start')}</span>
+        <input
+          type="time"
+          value={start}
+          onChange={(e) => {
+            const v = e.target.value
+            setStart(v)
+            if (!v) return
+            void updateSession(session.id, (x) => {
+              x.startedAt = atTime(x.startedAt, v)
+              if (x.endedAt && x.endedAt < x.startedAt) x.endedAt = x.startedAt
+            })
+          }}
+        />
+      </label>
+      <label>
+        <span className="muted small">{t('session.end')}</span>
+        <input
+          type="time"
+          value={end}
+          placeholder="–"
+          onChange={(e) => {
+            const v = e.target.value
+            setEnd(v)
+            if (!v) return
+            void updateSession(session.id, (x) => {
+              let e2 = atTime(x.startedAt, v)
+              if (e2 < x.startedAt) e2 += 86400000 // ends after midnight
+              x.endedAt = e2
+            })
+          }}
+        />
+      </label>
+    </div>
+  )
 }
 
 function EditSessionSheet({ open, onClose, session }: { open: boolean; onClose: () => void; session: Session }) {

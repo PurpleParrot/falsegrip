@@ -1313,3 +1313,30 @@ input.num:focus {
   height: 16px;
   border-radius: 50%;
 }
+
+.session-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.session-times label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.session-times input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+.session-times input:focus {
+  border-color: var(--accent);
+}
