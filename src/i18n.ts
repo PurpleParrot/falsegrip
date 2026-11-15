@@ -178,6 +178,10 @@ const de = {
   'timer.fullscreen': 'Vollbild',
 
   'settings.title': 'Einstellungen',
+  'settings.theme': 'Aussehen',
+  'theme.petrol': 'Petrol & Orange',
+  'theme.black-blue': 'Schwarz & Blau',
+  'theme.white-blue': 'Weiß & Blau',
   'settings.suggestions': 'Vorschlagswerte',
   'settings.suggestions.last': 'Letzte Werte',
   'settings.suggestions.targets': 'Zielwerte (Vorlage)',

@@ -1,7 +1,10 @@
+import { useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 import { BackupReminder } from './components/BackupReminder'
 import { IconChart, IconDumbbell, IconList } from './components/Icons'
+import { useSettings } from './hooks'
 import { t } from './i18n'
+import { applyTheme, isTheme } from './theme'
 import { navigate, useRoute } from './router'
 import { ActiveSession } from './screens/ActiveSession'
 import { ExerciseEdit } from './screens/ExerciseEdit'
@@ -16,6 +19,10 @@ export function App() {
   const { parts } = useRoute()
   const [first, second] = parts
   useRegisterSW({ immediate: true })
+  const { theme } = useSettings()
+  useEffect(() => {
+    if (isTheme(theme)) applyTheme(theme)
+  }, [theme])
 
   let screen
   let tab: 'trainings' | 'library' | 'stats' | null = null

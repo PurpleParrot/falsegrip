@@ -7,6 +7,7 @@ import { fmtDate } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import { goBack } from '../router'
+import { applyTheme, storedTheme, THEMES } from '../theme'
 
 export function Settings() {
   const s = useSettings()
@@ -27,6 +28,32 @@ export function Settings() {
         <h1 className="grow">{t('settings.title')}</h1>
       </header>
       <div className="form pad-x">
+        <div className="field">
+          <span>{t('settings.theme')}</span>
+          <div className="theme-picker">
+            {THEMES.map((th) => {
+              const on = (s.theme ?? storedTheme()) === th.id
+              return (
+                <button
+                  key={th.id}
+                  className={`theme-opt ${on ? 'on' : ''}`}
+                  aria-pressed={on}
+                  onClick={() => {
+                    applyTheme(th.id)
+                    void saveSettings({ theme: th.id })
+                  }}
+                >
+                  <span className="theme-swatch" style={{ background: th.bg }}>
+                    <i style={{ background: th.surface }} />
+                    <b style={{ background: th.accent }} />
+                  </span>
+                  <span>{t(`theme.${th.id}`)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="field">
           <span>{t('settings.suggestions')}</span>
           <div className="segmented">

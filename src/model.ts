@@ -108,6 +108,8 @@ export interface Settings {
   lastBackupAt?: number | null
   /** 'YYYY-MM' of the last monthly backup reminder */
   backupPromptMonth?: string
+  /** color theme, default 'petrol' */
+  theme?: import('./theme').ThemeId
   updatedAt: number
 }
 

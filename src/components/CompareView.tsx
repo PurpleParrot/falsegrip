@@ -6,7 +6,7 @@ import type { Exercise, Session } from '../model'
 import { buildSeries, metricsFor, rangeStart, type MetricDef, type MetricId, type Series } from '../stats'
 import { LineChart } from './LineChart'
 
-export const COMPARE_COLORS = ['#2dd4bf', '#f5a65b', '#a78bfa', '#f472b6', '#60a5fa']
+export const COMPARE_COLORS = ['var(--accent)', 'var(--accent-2)', '#e9d39a', '#b9a3e3', '#8fd18f']
 export const COMPARE_MAX = COMPARE_COLORS.length
 
 type Range = '1m' | '3m' | '1y' | 'all'
