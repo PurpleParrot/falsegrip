@@ -1,4 +1,5 @@
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { BackupReminder } from './components/BackupReminder'
 import { IconChart, IconDumbbell, IconList } from './components/Icons'
 import { t } from './i18n'
 import { navigate, useRoute } from './router'
@@ -50,6 +51,7 @@ export function App() {
   return (
     <div className={`app ${tab ? 'with-tabs' : ''}`}>
       {screen}
+      <BackupReminder />
       {tab && (
         <nav className="tabbar">
           <button className={tab === 'trainings' ? 'on' : ''} onClick={() => navigate('/', { replace: true })}>

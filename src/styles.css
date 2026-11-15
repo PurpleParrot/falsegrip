@@ -1221,3 +1221,15 @@ input.num:focus {
 .ink {
   color: var(--text);
 }
+
+.card.notice {
+  border: 1px solid color-mix(in srgb, var(--accent-2) 45%, transparent);
+  background: color-mix(in srgb, var(--accent-2) 8%, var(--surface));
+  padding: 14px 16px;
+}
+.card.notice strong {
+  color: var(--accent-2);
+}
+.card.notice p {
+  margin: 6px 0 0;
+}

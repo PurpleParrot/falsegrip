@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconBack } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
-import { exportBackup, importBackup, saveSettings } from '../db'
+import { downloadBackup } from '../backup'
+import { importBackup, saveSettings } from '../db'
+import { fmtDate } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import { goBack } from '../router'
-import { downloadFile } from '../stats'
 
 export function Settings() {
   const s = useSettings()
@@ -54,13 +55,11 @@ export function Settings() {
           <p className="muted small">{t('settings.backupHint')}</p>
           <button
             className="btn primary block"
-            onClick={async () => {
-              const b = await exportBackup()
-              downloadFile(`falsegrip-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(b), 'application/json')
-            }}
+            onClick={() => void downloadBackup()}
           >
             {t('settings.export')}
           </button>
+          <p className="muted small">{s.lastBackupAt ? t('settings.lastBackup', { date: fmtDate(s.lastBackupAt) }) : t('settings.noBackup')}</p>
           <button className="btn block" onClick={() => fileRef.current?.click()}>
             {t('settings.import')}
           </button>
@@ -87,6 +86,11 @@ export function Settings() {
         <div className="field">
           <span>{t('settings.storage')}</span>
           <p className="muted small">{persisted ? t('settings.persisted') : t('settings.notPersisted')}</p>
+        </div>
+
+        <div className="card notice">
+          <strong>{t('settings.dataWarningTitle')}</strong>
+          <p className="small">{t('settings.dataWarning')}</p>
         </div>
 
         <p className="muted small center">

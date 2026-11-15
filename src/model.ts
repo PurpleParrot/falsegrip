@@ -104,6 +104,10 @@ export interface Settings {
   bodyweight?: number | null
   seeded?: boolean
   seedVersion?: number
+  /** last time a backup file was exported */
+  lastBackupAt?: number | null
+  /** 'YYYY-MM' of the last monthly backup reminder */
+  backupPromptMonth?: string
   updatedAt: number
 }
 
