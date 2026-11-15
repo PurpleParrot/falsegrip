@@ -36,19 +36,19 @@
   --petrol-line: #4f5ef0;
 }
 
-/* Theme "Oscar & Wyld": dark plum + pink */
+/* Theme "Oscar & Wyld": neutral dark grey + pink */
 :root[data-theme='oscar-wyld'] {
-  --bg: #151014;
-  --surface: #1f181e;
-  --surface-2: #2a2027;
-  --line: #3a2d36;
-  --text: #f8f2f5;
-  --muted: #a9959f;
-  --faint: #6d5a65;
+  --bg: #111111;
+  --surface: #1b1b1c;
+  --surface-2: #262628;
+  --line: #333335;
+  --text: #f5f5f5;
+  --muted: #9a9a9e;
+  --faint: #5f5f63;
   --accent: #d0598f;
   --accent-2: #f2b47e;
   --accent-ink: #ffffff;
-  --petrol: #43203a;
+  --petrol: #3f1f30;
   --petrol-line: #d0598f;
 }
 
