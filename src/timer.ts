@@ -119,7 +119,8 @@ function beep() {
 
 setInterval(() => {
   if (state.mode === 'countdown' && state.running && !state.alerted && displaySeconds() <= 0) {
-    set({ alerted: true })
+    // stop at zero so the header doesn't show a "running" 00:00 forever
+    set({ alerted: true, running: false, acc: state.total * 1000 })
     try {
       navigator.vibrate?.([300, 150, 300, 150, 300])
     } catch {

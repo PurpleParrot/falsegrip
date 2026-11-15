@@ -1,5 +1,7 @@
 import { db, getSettings, softDelete } from './db'
 import {
+  blockFilled,
+  kindOf,
   exKey,
   hasValue,
   now,
@@ -94,7 +96,10 @@ export async function startSession(template: Template | null, exercises: Map<str
         exerciseId: it.exerciseId,
         levelId: it.levelId ?? null,
         targets: it.targets ?? null,
-        sets: Array.from({ length: Math.max(1, it.sets) }, () => emptySet(exercises.get(it.exerciseId))),
+        sets:
+          kindOf(exercises.get(it.exerciseId)) === 'sets'
+            ? Array.from({ length: Math.max(1, it.sets) }, () => emptySet(exercises.get(it.exerciseId)))
+            : [],
       })),
   }
   await db.sessions.put(session)
@@ -108,7 +113,7 @@ export async function addBlock(sessionId: string, ex: Exercise, levelId: string 
       exerciseId: ex.id,
       levelId,
       targets: null,
-      sets: Array.from({ length: Math.max(1, setCount) }, () => emptySet(ex)),
+      sets: kindOf(ex) === 'sets' ? Array.from({ length: Math.max(1, setCount) }, () => emptySet(ex)) : [],
     })
   })
 }
@@ -120,6 +125,11 @@ export async function swapBlock(sessionId: string, blockId: string, ex: Exercise
     b.exerciseId = ex.id
     b.levelId = levelId
     b.targets = null
+    if (kindOf(ex) !== 'sets') {
+      b.sets = []
+      return
+    }
+    if (!b.sets.length) b.sets = Array.from({ length: 3 }, () => emptySet(ex))
     // keep entered values, but adapt sides to the new exercise
     const sides = sidesOf(ex)
     b.sets = b.sets.map((set) => {
@@ -198,7 +208,57 @@ export async function setNote(sessionId: string, blockId: string, setId: string,
 }
 
 export function sessionIsEmpty(s: Session): boolean {
-  return !s.blocks.some((b) => b.sets.some(setFilled))
+  return !s.blocks.some(blockFilled)
+}
+
+export async function setBlockText(sessionId: string, blockId: string, text: string) {
+  await updateSession(sessionId, (s) => {
+    const b = findBlock(s, blockId)
+    if (b) b.text = text
+  })
+}
+
+export async function toggleChecked(sessionId: string, blockId: string, option: string) {
+  await updateSession(sessionId, (s) => {
+    const b = findBlock(s, blockId)
+    if (!b) return
+    const cur = b.checked ?? []
+    b.checked = cur.includes(option) ? cur.filter((x) => x !== option) : [...cur, option]
+  })
+}
+
+/** Adds a new option to a checklist exercise (e.g. a custom stretch) and ticks it in the block. */
+export async function addOption(sessionId: string, blockId: string, ex: Exercise, option: string) {
+  const name = option.trim()
+  if (!name) return
+  if (!(ex.options ?? []).includes(name)) {
+    await db.exercises.update(ex.id, { options: [...(ex.options ?? []), name], updatedAt: now() })
+  }
+  await updateSession(sessionId, (s) => {
+    const b = findBlock(s, blockId)
+    if (b && !(b.checked ?? []).includes(name)) b.checked = [...(b.checked ?? []), name]
+  })
+}
+
+/** Creates a template from a session: same exercises/levels, set count = sets used. */
+export async function saveAsTemplate(session: Session, name: string): Promise<string> {
+  const t = now()
+  const tpl: Template = {
+    id: uid(),
+    createdAt: t,
+    updatedAt: t,
+    deletedAt: null,
+    name: name.trim() || session.name || 'Template',
+    items: session.blocks.map((b) => ({
+      id: uid(),
+      exerciseId: b.exerciseId,
+      levelId: b.levelId ?? null,
+      sets: Math.max(1, b.sets.filter(setFilled).length || b.sets.length),
+      targets: null,
+    })),
+  }
+  await db.templates.put(tpl)
+  return tpl.id
 }
 
 /** Returns true if the session was discarded because it was empty. */

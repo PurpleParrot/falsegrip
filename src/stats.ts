@@ -36,6 +36,7 @@ const DEFS: Record<MetricId, MetricDef> = {
 
 /** levelId: undefined = exercise without levels; null = all levels ("ganze Übung"); string = one level */
 export function metricsFor(ex: Exercise, levelId: string | null | undefined): MetricDef[] {
+  if ((ex.kind ?? 'sets') !== 'sets') return []
   if (ex.levels.length && levelId === null) return [DEFS.bestIntensity, DEFS.totalIntensity]
   const f = ex.fields
   const ids: MetricId[] = []
@@ -173,6 +174,14 @@ export function buildCsv(sessions: Session[], exercises: Map<string, Exercise>, 
     for (const b of s.blocks) {
       const ex = exercises.get(b.exerciseId)
       const lvl = ex?.levels.find((l) => l.id === b.levelId)
+      const extra = b.text?.trim() || (b.checked?.length ? b.checked.join('; ') : '')
+      if (extra) {
+        rows.push(
+          [date, time, s.id, s.name, s.templateId ? templates.get(s.templateId) ?? '' : '', ex?.name ?? '', '', '', '', '', '', '', '', '', extra]
+            .map(esc)
+            .join(','),
+        )
+      }
       b.sets.forEach((set, i) => {
         for (const [side, v] of Object.entries(set.sides) as [Side, Vals][]) {
           if (!hasValue(v)) continue

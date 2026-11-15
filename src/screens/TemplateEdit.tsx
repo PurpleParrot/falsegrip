@@ -7,7 +7,7 @@ import { db, softDelete } from '../db'
 import { exerciseName, fieldLabel } from '../format'
 import { useExercises } from '../hooks'
 import { t } from '../i18n'
-import { fieldsOf, now, uid, type Template, type TemplateItem } from '../model'
+import { fieldsOf, kindOf, now, uid, type Template, type TemplateItem } from '../model'
 import { goBack } from '../router'
 
 function blank(): Template {
@@ -80,6 +80,7 @@ export function TemplateEdit({ id }: { id: string }) {
                   <IconTrash size={18} />
                 </button>
               </div>
+              {kindOf(ex) === 'sets' && (
               <div className="tpl-item-row">
                 <span className="muted">{t('template.sets')}</span>
                 <div className="stepper">
@@ -92,6 +93,7 @@ export function TemplateEdit({ id }: { id: string }) {
                   {t('template.targets')}
                 </button>
               </div>
+              )}
               {targetsOpen === it.id && ex && (
                 <div className="tpl-targets" style={{ gridTemplateColumns: `repeat(${fields.length}, 1fr)` }}>
                   {fields.map((f) => (

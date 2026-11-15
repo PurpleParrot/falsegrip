@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useExercises } from '../hooks'
 import { t } from '../i18n'
-import { MUSCLE_GROUPS, type Exercise, type MuscleGroup } from '../model'
+import { kindOf, MUSCLE_GROUPS, type Exercise, type MuscleGroup } from '../model'
 import { IconChevron, IconSearch } from './Icons'
 import { Sheet } from './Sheet'
 
@@ -32,10 +32,11 @@ export function ExercisePicker({
   open: boolean
   onClose: () => void
   onPick: (ex: Exercise, levelId: string | null) => void
-  /** allow picking an exercise with levels as a whole (statistics) */
+  /** statistics mode: allow picking an exercise with levels as a whole, hide note/checklist exercises */
   allowWhole?: boolean
 }) {
-  const { list } = useExercises()
+  const { list: all } = useExercises()
+  const list = useMemo(() => (allowWhole ? all.filter((e) => kindOf(e) === 'sets') : all), [all, allowWhole])
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const filtered = useMemo(() => list.filter((e) => matches(e, q)), [list, q])

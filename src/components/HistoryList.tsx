@@ -1,13 +1,14 @@
 import { exerciseName, fmtDate, fmtVals } from '../format'
 import { t } from '../i18n'
-import { hasValue, type Exercise, type Session } from '../model'
+import { blockFilled, kindOf, type Exercise, type Session } from '../model'
+import { hasValue } from '../model'
 
 /** All past sessions containing this exercise (all levels), newest first. */
 export function HistoryList({ ex, sessions, excludeId }: { ex: Exercise; sessions: Session[]; excludeId?: string }) {
   const rows = sessions
     .filter((s) => !s.deletedAt && s.id !== excludeId)
     .sort((a, b) => b.startedAt - a.startedAt)
-    .map((s) => ({ s, blocks: s.blocks.filter((b) => b.exerciseId === ex.id && b.sets.some((st) => Object.values(st.sides).some(hasValue))) }))
+    .map((s) => ({ s, blocks: s.blocks.filter((b) => b.exerciseId === ex.id && blockFilled(b)) }))
     .filter((r) => r.blocks.length)
   if (!rows.length) return <p className="muted center pad">{t('history.empty')}</p>
   return (
@@ -21,6 +22,16 @@ export function HistoryList({ ex, sessions, excludeId }: { ex: Exercise; session
           {blocks.map((b) => (
             <div key={b.id}>
               {ex.levels.length > 0 && <div className="accent small">{exerciseName(ex, b.levelId)}</div>}
+              {kindOf(ex) === 'note' && b.text && <div className="pre">{b.text}</div>}
+              {kindOf(ex) === 'checklist' && (b.checked?.length ?? 0) > 0 && (
+                <div className="chips">
+                  {b.checked!.map((c) => (
+                    <span key={c} className="chip on small static">
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              )}
               {b.sets.map((st, i) => {
                 const parts = Object.entries(st.sides).filter(([, v]) => hasValue(v))
                 if (!parts.length) return null

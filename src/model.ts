@@ -25,8 +25,15 @@ export interface Level {
   intensity: number
 }
 
+/** sets = normal sets with fields; note = free text (Warm-up); checklist = pick from options (Stretching) */
+export type ExerciseKind = 'sets' | 'note' | 'checklist'
+export const EXERCISE_KINDS: ExerciseKind[] = ['sets', 'note', 'checklist']
+
 export interface Exercise extends Meta {
   name: string
+  kind?: ExerciseKind
+  /** options for kind = checklist */
+  options?: string[]
   muscleGroups: MuscleGroup[]
   equipment: Equipment
   fields: Record<FieldKey, boolean>
@@ -59,6 +66,10 @@ export interface Block {
   exerciseId: string
   levelId?: string | null
   sets: WorkSet[]
+  /** kind = note */
+  text?: string
+  /** kind = checklist */
+  checked?: string[]
   /** target values copied from the template (used when suggestion source = targets) */
   targets?: Vals | null
 }
@@ -90,6 +101,7 @@ export interface Settings {
   suggestionSource: 'last' | 'targets'
   bodyweight?: number | null
   seeded?: boolean
+  seedVersion?: number
   updatedAt: number
 }
 
@@ -126,6 +138,12 @@ export function hasValue(v?: Vals | null): boolean {
 
 export function setFilled(s: WorkSet): boolean {
   return Object.values(s.sides).some(hasValue)
+}
+
+export const kindOf = (ex?: Pick<Exercise, 'kind'>): ExerciseKind => ex?.kind ?? 'sets'
+
+export function blockFilled(b: Block): boolean {
+  return b.sets.some(setFilled) || !!b.text?.trim() || (b.checked?.length ?? 0) > 0
 }
 
 export function evenIntensities(n: number): number[] {

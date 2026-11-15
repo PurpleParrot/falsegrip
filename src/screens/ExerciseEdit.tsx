@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { IconBack, IconDown, IconTrash, IconUp } from '../components/Icons'
 import { db, newExercise, softDelete } from '../db'
 import { t } from '../i18n'
-import { EQUIPMENT, evenIntensities, FIELD_ORDER, MUSCLE_GROUPS, now, uid, type Exercise, type FieldKey } from '../model'
+import { EQUIPMENT, evenIntensities, EXERCISE_KINDS, FIELD_ORDER, kindOf, MUSCLE_GROUPS, now, uid, type Exercise, type FieldKey } from '../model'
 import { goBack } from '../router'
 
 const PRESETS: FieldKey[][] = [['reps'], ['weight', 'reps'], ['time'], ['weight', 'time'], ['reps', 'time']]
@@ -14,6 +14,7 @@ export function ExerciseEdit({ id }: { id: string }) {
   const [ex, setEx] = useState<Exercise | null>(isNew ? newExercise() : null)
   const [showIntensity, setShowIntensity] = useState(false)
   const [error, setError] = useState('')
+  const [newOption, setNewOption] = useState('')
 
   useEffect(() => {
     if (!isNew && stored && !ex) setEx(structuredClone(stored))
@@ -32,9 +33,10 @@ export function ExerciseEdit({ id }: { id: string }) {
 
   const save = async () => {
     if (!ex.name.trim()) return setError(t('exercise.needName'))
-    if (!FIELD_ORDER.some((f) => ex.fields[f])) return setError(t('exercise.needField'))
+    if (kindOf(ex) === 'sets' && !FIELD_ORDER.some((f) => ex.fields[f])) return setError(t('exercise.needField'))
     const levels = ex.levels.filter((l) => l.name.trim()).map((l) => ({ ...l, name: l.name.trim() }))
-    await db.exercises.put({ ...ex, name: ex.name.trim(), levels, updatedAt: now() })
+    const options = (ex.options ?? []).map((o) => o.trim()).filter(Boolean)
+    await db.exercises.put({ ...ex, name: ex.name.trim(), levels, options, updatedAt: now() })
     goBack('/library')
   }
 
@@ -59,6 +61,47 @@ export function ExerciseEdit({ id }: { id: string }) {
           <input value={ex.name} placeholder={t('exercise.namePlaceholder')} onChange={(e) => patch({ name: e.target.value })} autoCapitalize="words" />
         </label>
 
+        <div className="field">
+          <span>{t('exercise.kind')}</span>
+          <div className="segmented">
+            {EXERCISE_KINDS.map((k) => (
+              <button key={k} className={kindOf(ex) === k ? 'on' : ''} onClick={() => patch({ kind: k })}>
+                {t(`exercise.kind.${k}`)}
+              </button>
+            ))}
+          </div>
+          {kindOf(ex) !== 'sets' && <p className="muted small">{t(`exercise.kindHint.${kindOf(ex) as 'note' | 'checklist'}`)}</p>}
+        </div>
+
+        {kindOf(ex) === 'checklist' && (
+          <div className="field">
+            <span>{t('exercise.options')}</span>
+            <div className="chips">
+              {(ex.options ?? []).map((o) => (
+                <button key={o} className="chip on" onClick={() => patch({ options: (ex.options ?? []).filter((x) => x !== o) })}>
+                  {o} ✕
+                </button>
+              ))}
+            </div>
+            <form
+              className="add-option"
+              onSubmit={(e) => {
+                e.preventDefault()
+                const v = newOption.trim()
+                if (v && !(ex.options ?? []).includes(v)) patch({ options: [...(ex.options ?? []), v] })
+                setNewOption('')
+              }}
+            >
+              <input value={newOption} placeholder={t('exercise.addOption')} onChange={(e) => setNewOption(e.target.value)} />
+              <button className="btn primary small" type="submit">
+                +
+              </button>
+            </form>
+          </div>
+        )}
+
+        {kindOf(ex) === 'sets' && (
+        <>
         <div className="field">
           <span>{t('exercise.fields')}</span>
           <div className="chips">
@@ -93,6 +136,8 @@ export function ExerciseEdit({ id }: { id: string }) {
             </button>
           </div>
         </div>
+        </>
+        )}
 
         <div className="field">
           <span>{t('exercise.muscles')}</span>
@@ -123,6 +168,7 @@ export function ExerciseEdit({ id }: { id: string }) {
           </div>
         </div>
 
+        {kindOf(ex) === 'sets' && (
         <div className="field">
           <span>{t('exercise.levels')}</span>
           <p className="muted small">{t('exercise.levelsHint')}</p>
@@ -175,6 +221,7 @@ export function ExerciseEdit({ id }: { id: string }) {
             </div>
           )}
         </div>
+        )}
 
         {!isNew && (
           <button

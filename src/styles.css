@@ -1108,3 +1108,65 @@ input.num:focus {
   color: var(--muted);
   font-weight: 500;
 }
+
+/* note / checklist blocks */
+.block-body {
+  padding: 4px 14px 10px;
+}
+.block-body textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  resize: vertical;
+  outline: none;
+}
+.block-body textarea:focus {
+  border-color: var(--accent);
+}
+.add-chip {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  padding: 0;
+  color: var(--accent);
+}
+.add-option {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+.add-option input {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--surface-2);
+  outline: none;
+}
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(90px + var(--safe-b));
+  transform: translateX(-50%);
+  z-index: 300;
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent);
+  font-size: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.pre {
+  white-space: pre-wrap;
+}
+.chip.static {
+  display: inline-flex;
+  align-items: center;
+}

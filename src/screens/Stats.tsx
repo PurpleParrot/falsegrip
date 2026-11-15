@@ -25,9 +25,10 @@ export function Stats() {
   // default: most recently trained exercise
   const effective = useMemo(() => {
     if (sel && map.get(sel.exId)) return sel
-    const b = sessions?.[0]?.blocks[0]
+    const b = sessions?.[0]?.blocks.find((x) => (map.get(x.exerciseId)?.kind ?? 'sets') === 'sets')
     if (b && map.get(b.exerciseId)) return { exId: b.exerciseId, levelId: b.levelId ?? null }
-    return list[0] ? { exId: list[0].id, levelId: null } : null
+    const first = list.find((e) => (e.kind ?? 'sets') === 'sets')
+    return first ? { exId: first.id, levelId: null } : null
   }, [sel, map, sessions, list])
 
   const ex = effective ? map.get(effective.exId) : undefined

@@ -11,6 +11,8 @@ import {
   IconMore,
   IconNote,
   IconSort,
+  IconPlus,
+  IconCopy,
   IconSwap,
   IconTimer,
   IconTrash,
@@ -24,7 +26,7 @@ import { db } from '../db'
 import { exerciseName, fieldLabel, fmtClock, fmtDate, fmtNum, fmtTime, toLocalInput } from '../format'
 import { useExercises, useSessions, useSettings } from '../hooks'
 import { t } from '../i18n'
-import { exKey, fieldsOf, hasValue, setFilled, sidesOf, type Block, type Exercise, type Session, type Side, type Vals } from '../model'
+import { blockFilled, exKey, fieldsOf, hasValue, kindOf, setFilled, sidesOf, type Block, type Exercise, type Session, type Side, type Vals } from '../model'
 import { goBack, navigate } from '../router'
 import {
   addBlock,
@@ -35,8 +37,12 @@ import {
   deleteSet,
   finishSession,
   moveBlock,
+  addOption,
   removeBlock,
+  saveAsTemplate,
   sessionIsEmpty,
+  setBlockText,
+  toggleChecked,
   setNote,
   setValue,
   suggestionFor,
@@ -61,6 +67,8 @@ export function ActiveSession({ id }: { id: string }) {
   const [editOpen, setEditOpen] = useState(false)
   const [openRow, setOpenRow] = useState<string | null>(null)
   const [overlay, setOverlay] = useState<{ kind: 'history' | 'stats'; block: Block } | null>(null)
+  const [tplName, setTplName] = useState<string | null>(null)
+  const [toast, setToast] = useState('')
   const [noteFor, setNoteFor] = useState<{ blockId: string; setId: string; text: string } | null>(null)
 
   const last = useMemo(
@@ -213,6 +221,7 @@ export function ActiveSession({ id }: { id: string }) {
         items={[
           { label: t('session.reorder'), icon: <IconSort />, onClick: () => setReorder(true) },
           { label: t('session.editTime'), icon: <IconEdit />, onClick: () => setEditOpen(true) },
+          { label: t('session.saveTemplate'), icon: <IconCopy />, onClick: () => setTplName(session.name || t('start.free')) },
           {
             label: t('session.delete'),
             icon: <IconTrash />,
@@ -261,6 +270,31 @@ export function ActiveSession({ id }: { id: string }) {
           )
         )}
       </Sheet>
+
+      <Sheet open={tplName !== null} onClose={() => setTplName(null)} title={t('session.saveTemplate')}>
+        {tplName !== null && (
+          <div className="form">
+            <label>
+              <span>{t('template.name')}</span>
+              <input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} />
+            </label>
+            <button
+              className="btn primary block"
+              onClick={async () => {
+                const name = tplName.trim() || t('start.free')
+                await saveAsTemplate(session, name)
+                setTplName(null)
+                setToast(t('session.templateSaved', { name }))
+                setTimeout(() => setToast(''), 2500)
+              }}
+            >
+              {t('common.save')}
+            </button>
+          </div>
+        )}
+      </Sheet>
+
+      {toast && <div className="toast">{toast}</div>}
 
       <Sheet open={!!noteFor} onClose={() => setNoteFor(null)} title={t('session.setNote')}>
         {noteFor && (
@@ -324,7 +358,20 @@ function ExerciseCard({
         </button>
       </div>
 
-      {ex && (
+      {ex && kindOf(ex) === 'note' && (
+        <div className="block-body">
+          <textarea
+            rows={3}
+            defaultValue={block.text ?? ''}
+            placeholder={t('session.notePlaceholderBlock')}
+            onChange={(e) => setBlockText(session.id, block.id, e.target.value)}
+          />
+        </div>
+      )}
+
+      {ex && kindOf(ex) === 'checklist' && <ChecklistBody session={session} block={block} ex={ex} />}
+
+      {ex && kindOf(ex) === 'sets' && (
         <div className="set-grid-head" style={{ gridTemplateColumns: cols }}>
           <span />
           {fields.map((f) => (
@@ -335,6 +382,7 @@ function ExerciseCard({
       )}
 
       {ex &&
+        kindOf(ex) === 'sets' &&
         block.sets.map((set, i) => (
           <div key={set.id} className={`set ${ex.unilateral ? 'uni' : ''} ${setFilled(set) ? 'filled' : ''}`}>
             {sides.map((side, si) => {
@@ -382,16 +430,20 @@ function ExerciseCard({
         ))}
 
       <div className="ex-foot">
-        <button className="link" onClick={() => addSet(session.id, block.id, ex)}>
-          + {t('session.addSet')}
-        </button>
+        {kindOf(ex) === 'sets' && (
+          <button className="link" onClick={() => addSet(session.id, block.id, ex)}>
+            + {t('session.addSet')}
+          </button>
+        )}
         <span className="grow" />
         <button className="icon-btn" onClick={() => onOverlay('history')} aria-label={t('history.title')}>
           <IconHistory size={20} />
         </button>
-        <button className="icon-btn" onClick={() => onOverlay('stats')} aria-label={t('ministats.title')}>
-          <IconChart size={20} />
-        </button>
+        {kindOf(ex) === 'sets' && (
+          <button className="icon-btn" onClick={() => onOverlay('stats')} aria-label={t('ministats.title')}>
+            <IconChart size={20} />
+          </button>
+        )}
       </div>
 
       <Menu
@@ -405,12 +457,55 @@ function ExerciseCard({
             icon: <IconTrash />,
             danger: true,
             onClick: () => {
-              if (!block.sets.some(setFilled) || confirm(t('session.removeExerciseConfirm'))) void removeBlock(session.id, block.id)
+              if (!blockFilled(block) || confirm(t('session.removeExerciseConfirm'))) void removeBlock(session.id, block.id)
             },
           },
         ]}
       />
     </section>
+  )
+}
+
+function ChecklistBody({ session, block, ex }: { session: Session; block: Block; ex: Exercise }) {
+  const [adding, setAdding] = useState<string | null>(null)
+  const checked = block.checked ?? []
+  // options of the exercise, plus anything ticked earlier that was removed from the list since
+  const options = [...(ex.options ?? []), ...checked.filter((c) => !(ex.options ?? []).includes(c))]
+  return (
+    <div className="block-body">
+      <div className="chips">
+        {options.map((o) => (
+          <button key={o} className={`chip ${checked.includes(o) ? 'on' : ''}`} onClick={() => toggleChecked(session.id, block.id, o)}>
+            {o}
+          </button>
+        ))}
+        {adding === null ? (
+          <button className="chip add-chip" onClick={() => setAdding('')} aria-label={t('session.addOption')}>
+            <IconPlus size={16} />
+          </button>
+        ) : (
+          <form
+            className="add-option"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              await addOption(session.id, block.id, ex, adding)
+              setAdding(null)
+            }}
+          >
+            <input
+              autoFocus
+              value={adding}
+              placeholder={t('session.addOptionPlaceholder')}
+              onChange={(e) => setAdding(e.target.value)}
+              onBlur={() => !adding.trim() && setAdding(null)}
+            />
+            <button className="btn primary small" type="submit">
+              OK
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
   )
 }
 

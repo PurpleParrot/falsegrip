@@ -50,7 +50,7 @@ export function Library({ segment }: { segment: 'exercises' | 'templates' }) {
                     <button className="grow left" onClick={() => navigate(`/exercise/${ex.id}`)}>
                       {ex.name}
                       <span className="muted small block">
-                        {[
+                        {(ex.kind ?? 'sets') !== 'sets' ? t(`exercise.kind.${ex.kind!}`) : [
                           t(`eq.${ex.equipment}`),
                           ex.unilateral ? 'L/R' : null,
                           (['weight', 'reps', 'time'] as const).filter((f) => ex.fields[f]).map((f) => t(`field.${f}`)).join(' + '),

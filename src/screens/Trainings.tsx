@@ -4,7 +4,7 @@ import { Sheet } from '../components/Sheet'
 import { exerciseName, fmtDuration, fmtMonth, fmtMonthShort, fmtWeekday } from '../format'
 import { useExercises, useSessions, useTemplates } from '../hooks'
 import { t } from '../i18n'
-import { setFilled, type Session, type Template } from '../model'
+import { blockFilled, kindOf, setFilled, type Session, type Template } from '../model'
 import { navigate } from '../router'
 import { startSession } from '../sessions'
 
@@ -48,8 +48,11 @@ export function Trainings() {
           {g.items.map((s) => {
             const running = !s.endedAt
             const blocks = s.blocks
-              .map((b) => ({ name: exerciseName(exMap.get(b.exerciseId), b.levelId), n: b.sets.filter(setFilled).length }))
-              .filter((b) => b.n > 0 || running)
+              .filter((b) => blockFilled(b) || running)
+              .map((b) => ({
+                name: exerciseName(exMap.get(b.exerciseId), b.levelId),
+                n: kindOf(exMap.get(b.exerciseId)) === 'sets' ? b.sets.filter(setFilled).length : null,
+              }))
             return (
               <button key={s.id} className="session-row" onClick={() => navigate(`/session/${s.id}`)}>
                 <div className="date-col">
@@ -68,7 +71,8 @@ export function Trainings() {
                     {blocks.length
                       ? blocks.slice(0, 4).map((b, i) => (
                           <div key={i}>
-                            {b.n}× {b.name}
+                            {b.n !== null && `${b.n}× `}
+                            {b.name}
                           </div>
                         ))
                       : t('trainings.noExercises')}
