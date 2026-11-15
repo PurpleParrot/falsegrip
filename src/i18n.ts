@@ -102,6 +102,8 @@ const de = {
   'template.targets': 'Zielwerte',
   'template.addExercise': 'Übung hinzufügen',
   'template.delete': 'Vorlage löschen',
+  'template.removeItem': 'Übung entfernen',
+  'template.removeItemConfirm': '{name} wirklich aus der Vorlage entfernen?',
   'template.deleteConfirm': 'Vorlage löschen?',
 
   'picker.title': 'Übung wählen',

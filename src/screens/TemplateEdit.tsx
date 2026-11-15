@@ -76,7 +76,14 @@ export function TemplateEdit({ id }: { id: string }) {
                 <button className="icon-btn" disabled={i === tpl.items.length - 1} onClick={() => move(i, 1)}>
                   <IconDown size={18} />
                 </button>
-                <button className="icon-btn danger" onClick={() => setItems(tpl.items.filter((x) => x.id !== it.id))}>
+                <button
+                  className="icon-btn danger"
+                  aria-label={t('template.removeItem')}
+                  onClick={() => {
+                    if (confirm(t('template.removeItemConfirm', { name: exerciseName(ex, it.levelId) })))
+                      setItems(tpl.items.filter((x) => x.id !== it.id))
+                  }}
+                >
                   <IconTrash size={18} />
                 </button>
               </div>
