@@ -182,6 +182,7 @@ const de = {
   'theme.petrol': 'Petrol & Orange',
   'theme.black-blue': 'Schwarz & Blau',
   'theme.white-blue': 'Weiß & Blau',
+  'theme.oscar-wyld': 'Oscar & Wyld',
   'settings.suggestions': 'Vorschlagswerte',
   'settings.suggestions.last': 'Letzte Werte',
   'settings.suggestions.targets': 'Zielwerte (Vorlage)',

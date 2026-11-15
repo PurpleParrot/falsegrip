@@ -36,6 +36,22 @@
   --petrol-line: #4f5ef0;
 }
 
+/* Theme "Oscar & Wyld": dark plum + pink */
+:root[data-theme='oscar-wyld'] {
+  --bg: #151014;
+  --surface: #1f181e;
+  --surface-2: #2a2027;
+  --line: #3a2d36;
+  --text: #f8f2f5;
+  --muted: #a9959f;
+  --faint: #6d5a65;
+  --accent: #d0598f;
+  --accent-2: #f2b47e;
+  --accent-ink: #ffffff;
+  --petrol: #43203a;
+  --petrol-line: #d0598f;
+}
+
 /* Theme "Weiß & Blau": light mode */
 :root[data-theme='white-blue'] {
   --bg: #ffffff;
@@ -1270,7 +1286,7 @@ input.num:focus {
 
 .theme-picker {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 .theme-opt {
