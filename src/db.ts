@@ -64,7 +64,7 @@ interface Seed {
 }
 
 export const STRETCH_OPTIONS = [
-  'Good Mornings', 'Hip Flexors', 'Baby Pose', 'Hamstrings', 'Chest', 'Lats', 'Pancake', 'Taylors Pose',
+  'Good Mornings', 'Hip Flexors', 'Baby Pose', 'Hamstrings', 'Chest', 'Lats', 'Pancake', 'Tailor Pose',
   'Front Split', 'Side Split', 'Bridge', 'German Hang', 'Dead Hang', 'Wrist', 'Shoulders',
 ]
 
@@ -89,7 +89,7 @@ const SEED: Seed[] = [
   { name: 'Stretching', kind: 'checklist', muscles: ['fullbody'], eq: 'floor', options: STRETCH_OPTIONS },
 ]
 
-const SEED_VERSION = 3
+const SEED_VERSION = 4
 
 function fromSeed(sd: Seed): Exercise {
   const intens = evenIntensities(sd.levels?.length ?? 0)
@@ -125,7 +125,7 @@ export function newExercise(partial: Partial<Exercise> = {}): Exercise {
 }
 
 export async function ensureSeeded() {
-  await db.transaction('rw', db.settings, db.exercises, async () => {
+  await db.transaction('rw', db.settings, db.exercises, db.sessions, async () => {
     const s = await getSettings()
     if (!s.seeded) {
       await db.exercises.bulkPut(SEED.map(fromSeed))
@@ -160,6 +160,16 @@ async function migrate(from: number) {
       if (ex.name === 'Stretching') await db.exercises.update(ex.id, { options: [...STRETCH_OPTIONS], updatedAt: t })
       else if (sd.bw !== undefined && ex.bwPct === undefined) await db.exercises.update(ex.id, { bwPct: sd.bw, updatedAt: t })
     }
+  }
+  if (from < 4) {
+    // v4: "Taylors Pose" -> "Tailor Pose" (exercise options and past sessions)
+    const fix = (xs?: string[]) => xs?.map((x) => (x === 'Taylors Pose' ? 'Tailor Pose' : x))
+    const t = now()
+    for (const ex of await db.exercises.toArray())
+      if (ex.options?.includes('Taylors Pose')) await db.exercises.update(ex.id, { options: fix(ex.options), updatedAt: t })
+    for (const se of await db.sessions.toArray())
+      if (se.blocks.some((b) => b.checked?.includes('Taylors Pose')))
+        await db.sessions.update(se.id, { blocks: se.blocks.map((b) => ({ ...b, checked: fix(b.checked) })), updatedAt: t })
   }
 }
 
