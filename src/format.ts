@@ -59,10 +59,14 @@ export function fmtVals(ex: Exercise, v: Vals | undefined | null): string {
   if (!v) return ''
   const parts: string[] = []
   const f = ex.fields
-  if (f.weight && v.weight) parts.push(`${isBodyweight(ex) ? '+' : ''}${fmtNum(v.weight)} kg`)
-  if (f.reps && v.reps != null) parts.push(`${fmtNum(v.reps)}${f.weight && v.weight ? '' : ' Reps'}`)
-  if (f.time && v.time != null) parts.push(`${fmtNum(v.time)} s`)
-  if (f.weight && v.weight && f.reps && v.reps != null) return `${parts[0]} × ${parts.slice(1).join(' · ')}`
+  // same order as the input grid: weight, time, reps (reps always last)
+  const w = f.weight && v.weight
+  const tm = f.time && v.time != null
+  const r = f.reps && v.reps != null
+  if (w) parts.push(`${isBodyweight(ex) ? '+' : ''}${fmtNum(v.weight)} kg`)
+  if (tm) parts.push(`${fmtNum(v.time)} s`)
+  if (w && r && !tm) return `${parts[0]} × ${fmtNum(v.reps)}`
+  if (r) parts.push(`${fmtNum(v.reps)} Reps`)
   return parts.join(' · ')
 }
 

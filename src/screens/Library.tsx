@@ -4,6 +4,7 @@ import { IconChevron, IconPlus, IconSearch } from '../components/Icons'
 import { exerciseName } from '../format'
 import { useExercises, useTemplates } from '../hooks'
 import { t } from '../i18n'
+import { FIELD_ORDER } from '../model'
 import { navigate } from '../router'
 
 export function Library({ segment }: { segment: 'exercises' | 'templates' }) {
@@ -53,7 +54,7 @@ export function Library({ segment }: { segment: 'exercises' | 'templates' }) {
                         {(ex.kind ?? 'sets') !== 'sets' ? t(`exercise.kind.${ex.kind!}`) : [
                           t(`eq.${ex.equipment}`),
                           ex.unilateral ? 'L/R' : null,
-                          (['weight', 'reps', 'time'] as const).filter((f) => ex.fields[f]).map((f) => t(`field.${f}`)).join(' + '),
+                          FIELD_ORDER.filter((f) => ex.fields[f]).map((f) => t(`field.${f}`)).join(' + '),
                         ]
                           .filter(Boolean)
                           .join(' · ')}

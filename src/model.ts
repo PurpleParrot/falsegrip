@@ -3,7 +3,8 @@
 // can merge records without restructuring.
 
 export type FieldKey = 'weight' | 'reps' | 'time'
-export const FIELD_ORDER: FieldKey[] = ['weight', 'reps', 'time']
+/** display order: reps always last (right) */
+export const FIELD_ORDER: FieldKey[] = ['weight', 'time', 'reps']
 
 export type Equipment = 'bar' | 'rings' | 'floor' | 'barbell' | 'dumbbell' | 'machine' | 'other'
 export const EQUIPMENT: Equipment[] = ['bar', 'rings', 'floor', 'barbell', 'dumbbell', 'machine', 'other']

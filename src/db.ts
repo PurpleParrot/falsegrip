@@ -79,7 +79,7 @@ const SEED: Seed[] = [
   { name: 'Body Row', bw: 55, fields: ['reps'], muscles: ['back'], eq: 'rings' },
   { name: 'Hanging Leg Raise', bw: 35, fields: ['reps'], muscles: ['core'], eq: 'bar' },
   { name: 'L-Sit', bw: 100, fields: ['time'], muscles: ['core'], eq: 'floor', levels: ['Tuck', 'One Leg', 'Full'] },
-  { name: 'Front Lever', bw: 100, fields: ['time'], muscles: ['back', 'core'], eq: 'bar', levels: ['Tuck', 'Advanced Tuck', 'One Leg', 'Straddle', 'Full'] },
+  { name: 'Front Lever', bw: 100, fields: ['reps', 'time'], muscles: ['back', 'core'], eq: 'bar', levels: ['Tuck', 'Advanced Tuck', 'One Leg', 'Straddle', 'Full'] },
   { name: 'Human Flag', bw: 100, fields: ['time'], unilateral: true, muscles: ['core', 'shoulders'], eq: 'bar', levels: ['Tuck', 'Straddle', 'Full'] },
   { name: 'Handstand Hold', bw: 100, fields: ['time'], muscles: ['shoulders'], eq: 'floor', levels: ['Wall', 'Freestanding'] },
   { name: 'Deadlift', bw: 0, fields: ['weight', 'reps'], muscles: ['legs', 'back'], eq: 'barbell' },
@@ -94,7 +94,7 @@ const SEED: Seed[] = [
   { name: 'Stretching', kind: 'checklist', muscles: ['fullbody'], eq: 'floor', options: STRETCH_OPTIONS },
 ]
 
-const SEED_VERSION = 5
+const SEED_VERSION = 6
 
 function fromSeed(sd: Seed): Exercise {
   const intens = evenIntensities(sd.levels?.length ?? 0)
@@ -181,6 +181,13 @@ async function migrate(from: number) {
     const names = new Set((await db.exercises.toArray()).filter((e) => !e.deletedAt).map((e) => e.name.toLowerCase()))
     for (const n of ['Bench Press', 'Butterfly', 'Biceps Curl', 'Triceps Extension', 'Shoulder Fly'])
       if (!names.has(n.toLowerCase())) await db.exercises.put(fromSeed(SEED.find((x) => x.name === n)!))
+  }
+  if (from < 6) {
+    // v6: Front Lever (all variants) tracks reps + time
+    const t = now()
+    for (const ex of await db.exercises.toArray())
+      if (!ex.deletedAt && /front lever/i.test(ex.name))
+        await db.exercises.update(ex.id, { fields: { ...ex.fields, reps: true, time: true }, updatedAt: t })
   }
 }
 

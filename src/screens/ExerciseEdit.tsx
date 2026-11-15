@@ -4,10 +4,8 @@ import { IconBack, IconDown, IconTrash, IconUp } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
 import { db, newExercise, softDelete } from '../db'
 import { t } from '../i18n'
-import { bwPctOf, EQUIPMENT, evenIntensities, EXERCISE_KINDS, FIELD_ORDER, kindOf, MUSCLE_GROUPS, now, uid, type Exercise, type FieldKey } from '../model'
+import { bwPctOf, EQUIPMENT, evenIntensities, EXERCISE_KINDS, FIELD_ORDER, kindOf, MUSCLE_GROUPS, now, uid, type Exercise } from '../model'
 import { goBack } from '../router'
-
-const PRESETS: FieldKey[][] = [['reps'], ['weight', 'reps'], ['time'], ['weight', 'time'], ['reps', 'time']]
 
 export function ExerciseEdit({ id }: { id: string }) {
   const isNew = id === 'new'
@@ -40,8 +38,6 @@ export function ExerciseEdit({ id }: { id: string }) {
     await db.exercises.put({ ...ex, name: ex.name.trim(), levels, options, updatedAt: now() })
     goBack('/library')
   }
-
-  const presetActive = (p: FieldKey[]) => FIELD_ORDER.every((f) => ex.fields[f] === p.includes(f))
 
   return (
     <div className="screen">
@@ -109,18 +105,6 @@ export function ExerciseEdit({ id }: { id: string }) {
             {FIELD_ORDER.map((f) => (
               <button key={f} className={`chip ${ex.fields[f] ? 'on' : ''}`} onClick={() => patch({ fields: { ...ex.fields, [f]: !ex.fields[f] } })}>
                 {t(`field.${f}`)}
-              </button>
-            ))}
-          </div>
-          <div className="chips preset-row">
-            <span className="muted small">{t('exercise.presets')}:</span>
-            {PRESETS.map((p) => (
-              <button
-                key={p.join()}
-                className={`chip small ${presetActive(p) ? 'on' : ''}`}
-                onClick={() => patch({ fields: { weight: p.includes('weight'), reps: p.includes('reps'), time: p.includes('time') } })}
-              >
-                {p.map((f) => t(`field.${f}`)).join(' + ')}
               </button>
             ))}
           </div>

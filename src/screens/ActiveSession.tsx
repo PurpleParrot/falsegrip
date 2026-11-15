@@ -457,7 +457,9 @@ function ExerciseCard({
             icon: <IconTrash />,
             danger: true,
             onClick: () => {
-              if (!blockFilled(block) || confirm(t('session.removeExerciseConfirm'))) void removeBlock(session.id, block.id)
+              const name = exerciseName(ex, block.levelId)
+              const msg = blockFilled(block) ? t('session.removeExerciseConfirmFilled', { name }) : t('session.removeExerciseConfirm', { name })
+              if (confirm(msg)) void removeBlock(session.id, block.id)
             },
           },
         ]}
