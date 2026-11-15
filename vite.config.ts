@@ -14,7 +14,7 @@ export default defineConfig(({ command }) => {
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'apple-touch-icon-180x180.png'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon-180x180.png'],
       manifest: {
         name: 'Falsegrip',
         short_name: 'Falsegrip',
