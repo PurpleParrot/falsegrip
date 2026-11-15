@@ -1,5 +1,5 @@
 import type { TKey } from './i18n'
-import { hasValue, type Exercise, type Session, type Side, type Vals } from './model'
+import { bwPctOf, hasValue, type Exercise, type Session, type Side, type Vals } from './model'
 
 export type MetricId =
   | 'maxReps'
@@ -7,6 +7,7 @@ export type MetricId =
   | 'avgReps'
   | 'maxWeight'
   | 'volume'
+  | 'timeVolume'
   | 'e1rm'
   | 'repsAtWeight'
   | 'maxTime'
@@ -26,6 +27,7 @@ const DEFS: Record<MetricId, MetricDef> = {
   avgReps: { id: 'avgReps', label: 'm.avgReps', unit: 'Reps' },
   maxWeight: { id: 'maxWeight', label: 'm.maxWeight', unit: 'kg' },
   volume: { id: 'volume', label: 'm.volume', unit: 'kg' },
+  timeVolume: { id: 'timeVolume', label: 'm.timeVolume', unit: 'kg·s' },
   e1rm: { id: 'e1rm', label: 'm.e1rm', unit: 'kg' },
   repsAtWeight: { id: 'repsAtWeight', label: 'm.repsAtWeight', unit: 'Reps' },
   maxTime: { id: 'maxTime', label: 'm.maxTime', unit: 's' },
@@ -37,19 +39,26 @@ const DEFS: Record<MetricId, MetricDef> = {
 /** levelId: undefined = exercise without levels; null = all levels ("ganze Übung"); string = one level */
 export function metricsFor(ex: Exercise, levelId: string | null | undefined): MetricDef[] {
   if ((ex.kind ?? 'sets') !== 'sets') return []
-  if (ex.levels.length && levelId === null) return [DEFS.bestIntensity, DEFS.totalIntensity]
   const f = ex.fields
+  // volume = load × reps (or × seconds for holds); load = body weight × share + added weight
+  const vol: MetricId | null = f.reps ? 'volume' : f.time ? 'timeVolume' : null
   const ids: MetricId[] = []
-  if (f.weight && f.reps) ids.push('maxWeight', 'volume', 'e1rm', 'repsAtWeight', 'maxReps')
-  else if (f.weight) ids.push('maxWeight')
-  if (f.reps && !f.weight) ids.push('maxReps', 'totalReps', 'avgReps')
-  if (f.time) ids.push('maxTime', 'totalTime')
+  if (ex.levels.length && levelId === null) ids.push('bestIntensity', 'totalIntensity')
+  else {
+    if (f.weight && f.reps) ids.push('maxWeight', 'e1rm', 'repsAtWeight', 'maxReps')
+    else if (f.weight) ids.push('maxWeight')
+    if (f.reps && !f.weight) ids.push('maxReps', 'totalReps', 'avgReps')
+    if (f.time) ids.push('maxTime', 'totalTime')
+  }
+  if (vol) ids.splice(ids[0] === 'maxWeight' ? 1 : ids.length, 0, vol)
   return ids.map((i) => DEFS[i])
 }
 
 interface Entry {
   v: Vals
   intensity: number
+  /** body weight for this set (stored with the set, else current setting) */
+  bw: number
 }
 
 const w = (v: Vals) => v.weight ?? 0
@@ -71,7 +80,11 @@ function compute(ex: Exercise, m: MetricId, entries: Entry[], atWeight?: number 
     case 'maxWeight':
       return maxOf(vs.map(w))
     case 'volume':
-      return sum(vs.map((v) => w(v) * r(v)))
+    case 'timeVolume': {
+      const share = bwPctOf(ex) / 100
+      const amount = m === 'volume' ? r : tm
+      return Math.round(sum(entries.map((e) => (e.bw * share + w(e.v)) * amount(e.v))))
+    }
     case 'e1rm':
       return maxOf(vs.filter((v) => r(v) > 0).map((v) => Math.round(w(v) * (1 + (r(v) - 1) / 30) * 10) / 10))
     case 'repsAtWeight': {
@@ -99,6 +112,18 @@ export interface Point {
 export interface Series {
   side: Side
   points: Point[]
+  /** set in comparison mode */
+  key?: string
+  label?: string
+  color?: string
+}
+
+export interface SeriesOpts {
+  atWeight?: number | null
+  /** fallback body weight (settings) for sets stored without one */
+  bodyweight?: number | null
+  /** comparison mode: merge L and R into one line */
+  combineSides?: boolean
 }
 
 export function buildSeries(
@@ -107,9 +132,11 @@ export function buildSeries(
   levelId: string | null | undefined,
   metric: MetricId,
   from: number,
-  atWeight?: number | null,
+  opts: SeriesOpts = {},
 ): Series[] {
-  const sides: Side[] = ex.unilateral ? ['L', 'R'] : ['B']
+  const { atWeight, bodyweight, combineSides } = opts
+  const sides: Side[] = ex.unilateral && !combineSides ? ['L', 'R'] : ['B']
+  const sidesOfSet: Side[] = ex.unilateral ? (combineSides ? ['L', 'R'] : []) : ['B']
   const intensityOf = (lid?: string | null) => ex.levels.find((l) => l.id === lid)?.intensity ?? 100
   const out: Series[] = sides.map((side) => ({ side, points: [] }))
   const sorted = sessions.filter((s) => !s.deletedAt && s.startedAt >= from).sort((a, b) => a.startedAt - b.startedAt)
@@ -121,10 +148,11 @@ export function buildSeries(
     sides.forEach((side, i) => {
       const entries: Entry[] = []
       for (const b of blocks)
-        for (const set of b.sets) {
-          const v = set.sides[side]
-          if (hasValue(v)) entries.push({ v: v!, intensity: intensityOf(b.levelId) })
-        }
+        for (const set of b.sets)
+          for (const sd of side === 'B' && sidesOfSet.length ? sidesOfSet : [side]) {
+            const v = set.sides[sd]
+            if (hasValue(v)) entries.push({ v: v!, intensity: intensityOf(b.levelId), bw: set.bodyweight ?? bodyweight ?? 0 })
+          }
       const y = compute(ex, metric, entries, atWeight)
       if (y !== null) out[i].points.push({ t: s.startedAt, y, sessionId: s.id })
     })

@@ -11,7 +11,9 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
   const H = height
   const pad = { l: 36, r: 12, t: 14, b: 22 }
   const all = series.flatMap((s) => s.points)
-  const [sel, setSel] = useState<{ side: string; i: number } | null>(null)
+  const [sel, setSel] = useState<{ k: number; i: number } | null>(null)
+  const colorOf = (s: Series) => s.color ?? COLORS[s.side]
+  const labelled = series.some((s) => s.label)
 
   const geo = useMemo(() => {
     if (!all.length) return null
@@ -42,7 +44,8 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
 
   if (!geo) return <p className="muted center pad">{t('stats.noData')}</p>
 
-  const selected = sel ? series.find((s) => s.side === sel.side)?.points[sel.i] : null
+  const selS = sel ? series[sel.k] : undefined
+  const selected = selS && sel ? selS.points[sel.i] : null
   const gridYs = [0, 0.5, 1].map((f) => geo.y0 + f * (geo.y1 - geo.y0))
 
   return (
@@ -54,8 +57,12 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
               {fmtNum(selected.y, 1)} {unit}
             </strong>
             <span className="muted"> · {fmtDateShort(selected.t)}</span>
-            {series.length > 1 && <span className="muted"> · {sel!.side === 'L' ? t('stats.left') : t('stats.right')}</span>}
+            {series.length > 1 && (
+              <span className="muted"> · {selS!.label ?? (selS!.side === 'L' ? t('stats.left') : t('stats.right'))}</span>
+            )}
           </>
+        ) : labelled ? (
+          <span className="muted small">{t('stats.tapHint')}</span>
         ) : series.length > 1 ? (
           <span className="legend">
             <i style={{ background: COLORS.L }} /> {t('stats.left')} <i style={{ background: COLORS.R }} /> {t('stats.right')}
@@ -79,23 +86,23 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
         <text x={W - pad.r} y={H - 4} className="axis" textAnchor="end">
           {fmtDateShort(geo.t1)}
         </text>
-        {series.map((s) => {
+        {series.map((s, k) => {
           if (!s.points.length) return null
           const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${geo.x(p.t).toFixed(1)},${geo.y(p.y).toFixed(1)}`).join(' ')
           return (
-            <g key={s.side + d.length}>
-              <path d={d} className="line" pathLength={1} style={{ stroke: COLORS[s.side] }} />
+            <g key={(s.key ?? s.side) + d.length}>
+              <path d={d} className="line" pathLength={1} style={{ stroke: colorOf(s) }} />
               {s.points.map((p, i) => (
                 <circle
                   key={i}
                   cx={geo.x(p.t)}
                   cy={geo.y(p.y)}
-                  r={sel?.side === s.side && sel.i === i ? 6 : 3.5}
+                  r={sel?.k === k && sel.i === i ? 6 : 3.5}
                   className="dot"
-                  style={{ fill: COLORS[s.side] }}
+                  style={{ fill: colorOf(s) }}
                   onClick={(e) => {
                     e.stopPropagation()
-                    setSel({ side: s.side, i })
+                    setSel({ k, i })
                   }}
                 />
               ))}

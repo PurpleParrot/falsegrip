@@ -28,15 +28,23 @@ export function ExercisePicker({
   onClose,
   onPick,
   allowWhole,
+  filter,
+  title,
 }: {
   open: boolean
   onClose: () => void
   onPick: (ex: Exercise, levelId: string | null) => void
   /** statistics mode: allow picking an exercise with levels as a whole, hide note/checklist exercises */
   allowWhole?: boolean
+  /** extra filter, e.g. only exercises comparable with the current selection */
+  filter?: (ex: Exercise) => boolean
+  title?: string
 }) {
   const { list: all } = useExercises()
-  const list = useMemo(() => (allowWhole ? all.filter((e) => kindOf(e) === 'sets') : all), [all, allowWhole])
+  const list = useMemo(
+    () => all.filter((e) => (!allowWhole || kindOf(e) === 'sets') && (!filter || filter(e))),
+    [all, allowWhole, filter],
+  )
   const [q, setQ] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
   const filtered = useMemo(() => list.filter((e) => matches(e, q)), [list, q])
@@ -47,7 +55,7 @@ export function ExercisePicker({
     setExpanded(null)
   }
   return (
-    <Sheet open={open} onClose={onClose} title={t('picker.title')} full>
+    <Sheet open={open} onClose={onClose} title={title ?? t('picker.title')} full>
       <label className="search">
         <IconSearch size={18} />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('library.search')} />

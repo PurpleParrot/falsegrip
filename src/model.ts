@@ -41,6 +41,8 @@ export interface Exercise extends Meta {
   levels: Level[]
   /** true once the user edited intensities by hand; otherwise they are auto-distributed */
   intensityCustom?: boolean
+  /** share of body weight moved, 0–100 %. Used for volume. undefined = default by equipment */
+  bwPct?: number
 }
 
 export interface Vals {
@@ -152,4 +154,10 @@ export function evenIntensities(n: number): number[] {
 
 export function exKey(exerciseId: string, levelId?: string | null) {
   return levelId ? `${exerciseId}|${levelId}` : exerciseId
+}
+
+/** body-weight share in % (default: 100 for bodyweight equipment, 0 for barbell/dumbbell/machine) */
+export function bwPctOf(ex: Exercise): number {
+  if (typeof ex.bwPct === 'number') return ex.bwPct
+  return ['barbell', 'dumbbell', 'machine'].includes(ex.equipment) ? 0 : 100
 }

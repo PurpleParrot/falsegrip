@@ -59,36 +59,37 @@ interface Seed {
   levels?: string[]
   kind?: ExerciseKind
   options?: string[]
+  /** share of body weight moved in % (see BW_PCT sources in README) */
+  bw?: number
 }
 
 export const STRETCH_OPTIONS = [
-  'Hamstrings', 'Hip Flexors', 'Quads', 'Glutes', 'Adductors', 'Calves', 'Lower Back',
-  'Chest', 'Shoulders', 'Lats', 'Biceps', 'Forearms', 'Wrists', 'Neck',
-  'Pancake', 'Pike', 'Front Split', 'Middle Split', 'Bridge', 'German Hang', 'Shoulder Dislocates',
+  'Good Mornings', 'Hip Flexors', 'Baby Pose', 'Hamstrings', 'Chest', 'Lats', 'Pancake', 'Taylors Pose',
+  'Front Split', 'Side Split', 'Bridge', 'German Hang', 'Dead Hang', 'Wrist', 'Shoulders',
 ]
 
 const SEED: Seed[] = [
   { name: 'Warm-up', kind: 'note', muscles: ['fullbody'], eq: 'other' },
-  { name: 'Pull-up', fields: ['weight', 'reps'], muscles: ['back', 'arms'], eq: 'bar' },
-  { name: 'Muscle-up', fields: ['weight', 'reps'], muscles: ['back', 'chest', 'arms'], eq: 'bar' },
-  { name: 'Dip', fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'bar' },
-  { name: 'Ring Dip', fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'rings' },
-  { name: 'Push-up', fields: ['weight', 'reps'], muscles: ['chest'], eq: 'floor' },
-  { name: 'Pike Push-up', fields: ['reps'], muscles: ['shoulders'], eq: 'floor' },
-  { name: 'Body Row', fields: ['reps'], muscles: ['back'], eq: 'rings' },
-  { name: 'Hanging Leg Raise', fields: ['reps'], muscles: ['core'], eq: 'bar' },
-  { name: 'L-Sit', fields: ['time'], muscles: ['core'], eq: 'floor', levels: ['Tuck', 'One Leg', 'Full'] },
-  { name: 'Front Lever', fields: ['time'], muscles: ['back', 'core'], eq: 'bar', levels: ['Tuck', 'Advanced Tuck', 'One Leg', 'Straddle', 'Full'] },
-  { name: 'Human Flag', fields: ['time'], unilateral: true, muscles: ['core', 'shoulders'], eq: 'bar', levels: ['Tuck', 'Straddle', 'Full'] },
-  { name: 'Handstand Hold', fields: ['time'], muscles: ['shoulders'], eq: 'floor', levels: ['Wall', 'Freestanding'] },
-  { name: 'Deadlift', fields: ['weight', 'reps'], muscles: ['legs', 'back'], eq: 'barbell' },
-  { name: 'Squat', fields: ['weight', 'reps'], muscles: ['legs'], eq: 'barbell' },
-  { name: 'Lunge', fields: ['weight', 'reps'], unilateral: true, muscles: ['legs'], eq: 'dumbbell' },
-  { name: 'Dumbbell Shoulder Press', fields: ['weight', 'reps'], muscles: ['shoulders'], eq: 'dumbbell' },
+  { name: 'Pull-up', bw: 100, fields: ['weight', 'reps'], muscles: ['back', 'arms'], eq: 'bar' },
+  { name: 'Muscle-up', bw: 100, fields: ['weight', 'reps'], muscles: ['back', 'chest', 'arms'], eq: 'bar' },
+  { name: 'Dip', bw: 100, fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'bar' },
+  { name: 'Ring Dip', bw: 100, fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'rings' },
+  { name: 'Push-up', bw: 70, fields: ['weight', 'reps'], muscles: ['chest'], eq: 'floor' },
+  { name: 'Pike Push-up', bw: 75, fields: ['reps'], muscles: ['shoulders'], eq: 'floor' },
+  { name: 'Body Row', bw: 55, fields: ['reps'], muscles: ['back'], eq: 'rings' },
+  { name: 'Hanging Leg Raise', bw: 35, fields: ['reps'], muscles: ['core'], eq: 'bar' },
+  { name: 'L-Sit', bw: 100, fields: ['time'], muscles: ['core'], eq: 'floor', levels: ['Tuck', 'One Leg', 'Full'] },
+  { name: 'Front Lever', bw: 100, fields: ['time'], muscles: ['back', 'core'], eq: 'bar', levels: ['Tuck', 'Advanced Tuck', 'One Leg', 'Straddle', 'Full'] },
+  { name: 'Human Flag', bw: 100, fields: ['time'], unilateral: true, muscles: ['core', 'shoulders'], eq: 'bar', levels: ['Tuck', 'Straddle', 'Full'] },
+  { name: 'Handstand Hold', bw: 100, fields: ['time'], muscles: ['shoulders'], eq: 'floor', levels: ['Wall', 'Freestanding'] },
+  { name: 'Deadlift', bw: 0, fields: ['weight', 'reps'], muscles: ['legs', 'back'], eq: 'barbell' },
+  { name: 'Squat', bw: 0, fields: ['weight', 'reps'], muscles: ['legs'], eq: 'barbell' },
+  { name: 'Lunge', bw: 0, fields: ['weight', 'reps'], unilateral: true, muscles: ['legs'], eq: 'dumbbell' },
+  { name: 'Dumbbell Shoulder Press', bw: 0, fields: ['weight', 'reps'], muscles: ['shoulders'], eq: 'dumbbell' },
   { name: 'Stretching', kind: 'checklist', muscles: ['fullbody'], eq: 'floor', options: STRETCH_OPTIONS },
 ]
 
-const SEED_VERSION = 2
+const SEED_VERSION = 3
 
 function fromSeed(sd: Seed): Exercise {
   const intens = evenIntensities(sd.levels?.length ?? 0)
@@ -102,6 +103,7 @@ function fromSeed(sd: Seed): Exercise {
     equipment: sd.eq,
     fields: { weight: f.includes('weight'), reps: f.includes('reps'), time: f.includes('time') },
     levels: (sd.levels ?? []).map((n, i) => ({ id: uid(), name: n, intensity: intens[i] })),
+    bwPct: sd.bw,
   })
 }
 
@@ -127,21 +129,38 @@ export async function ensureSeeded() {
     const s = await getSettings()
     if (!s.seeded) {
       await db.exercises.bulkPut(SEED.map(fromSeed))
-    } else if ((s.seedVersion ?? 1) < 2) {
-      // v2: Chin-up removed, Ring Row -> Body Row, new: Muscle-up, Human Flag, Warm-up, Stretching
-      const all = await db.exercises.toArray()
-      const byName = (n: string) => all.find((e) => e.name === n && !e.deletedAt)
-      const t = now()
-      const chin = byName('Chin-up')
-      if (chin) await db.exercises.update(chin.id, { deletedAt: t, updatedAt: t })
-      const row = byName('Ring Row')
-      if (row && !byName('Body Row')) await db.exercises.update(row.id, { name: 'Body Row', updatedAt: t })
-      for (const n of ['Muscle-up', 'Human Flag', 'Warm-up', 'Stretching']) {
-        if (!byName(n)) await db.exercises.put(fromSeed(SEED.find((x) => x.name === n)!))
-      }
+    } else if ((s.seedVersion ?? 1) < SEED_VERSION) {
+      await migrate(s.seedVersion ?? 1)
     } else return
     await db.settings.put({ ...s, seeded: true, seedVersion: SEED_VERSION, updatedAt: now() })
   })
+}
+
+async function migrate(from: number) {
+  if (from < 2) {
+    // v2: Chin-up removed, Ring Row -> Body Row, new: Muscle-up, Human Flag, Warm-up, Stretching
+    const all = await db.exercises.toArray()
+    const byName = (n: string) => all.find((e) => e.name === n && !e.deletedAt)
+    const t = now()
+    const chin = byName('Chin-up')
+    if (chin) await db.exercises.update(chin.id, { deletedAt: t, updatedAt: t })
+    const row = byName('Ring Row')
+    if (row && !byName('Body Row')) await db.exercises.update(row.id, { name: 'Body Row', updatedAt: t })
+    for (const n of ['Muscle-up', 'Human Flag', 'Warm-up', 'Stretching']) {
+      if (!byName(n)) await db.exercises.put(fromSeed(SEED.find((x) => x.name === n)!))
+    }
+  }
+  if (from < 3) {
+    // v3: new stretching list, body-weight share for volume
+    const all = (await db.exercises.toArray()).filter((e) => !e.deletedAt)
+    const t = now()
+    for (const ex of all) {
+      const sd = SEED.find((x) => x.name === ex.name)
+      if (!sd) continue
+      if (ex.name === 'Stretching') await db.exercises.update(ex.id, { options: [...STRETCH_OPTIONS], updatedAt: t })
+      else if (sd.bw !== undefined && ex.bwPct === undefined) await db.exercises.update(ex.id, { bwPct: sd.bw, updatedAt: t })
+    }
+  }
 }
 
 // ---------- Soft delete helpers (keep tombstones for future sync) ----------

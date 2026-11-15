@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fmtDate, fmtNum, fmtVals, exerciseName } from '../format'
 import { t } from '../i18n'
-import { hasValue, type Exercise, type Session } from '../model'
+import { bwPctOf, hasValue, type Exercise, type Session } from '../model'
 import { buildSeries, metricsFor, rangeStart, weightsUsed, type MetricId } from '../stats'
+import { useSettings } from '../hooks'
 import { LineChart } from './LineChart'
 
 type Range = '1m' | '3m' | '1y' | 'all'
@@ -25,6 +26,7 @@ export function StatsView({
   const [range, setRange] = useState<Range>('3m')
   const weights = useMemo(() => weightsUsed(sessions, ex, levelId), [sessions, ex, levelId])
   const [atWeight, setAtWeight] = useState<number | null>(null)
+  const { bodyweight } = useSettings()
 
   useEffect(() => {
     if (!metrics.some((m) => m.id === metric)) setMetric(metrics[0]?.id)
@@ -36,8 +38,8 @@ export function StatsView({
 
   const def = metrics.find((m) => m.id === metric) ?? metrics[0]
   const series = useMemo(
-    () => (def ? buildSeries(sessions, ex, levelId, def.id, rangeStart(range), atWeight) : []),
-    [sessions, ex, levelId, def, range, atWeight],
+    () => (def ? buildSeries(sessions, ex, levelId, def.id, rangeStart(range), { atWeight, bodyweight }) : []),
+    [sessions, ex, levelId, def, range, atWeight, bodyweight],
   )
   const pts = series.flatMap((s) => s.points)
   const best = pts.length ? Math.max(...pts.map((p) => p.y)) : null
@@ -71,6 +73,7 @@ export function StatsView({
           ))}
         </div>
       )}
+      {(def.id === 'volume' || def.id === 'timeVolume') && <VolumeHint ex={ex} missingBw={!bodyweight} />}
       <div className="segmented small">
         {RANGES.map((r) => (
           <button key={r} className={r === range ? 'on' : ''} onClick={() => setRange(r)}>
@@ -115,5 +118,15 @@ export function StatsView({
         </div>
       )}
     </div>
+  )
+}
+
+export function VolumeHint({ ex, missingBw }: { ex: Exercise; missingBw: boolean }) {
+  const pct = bwPctOf(ex)
+  return (
+    <p className="muted small">
+      {pct > 0 ? t('stats.volumeHint', { pct }) : t('stats.volumeHintNoBw')}
+      {pct > 0 && missingBw && <span className="warn"> {t('stats.volumeNoBw')}</span>}
+    </p>
   )
 }

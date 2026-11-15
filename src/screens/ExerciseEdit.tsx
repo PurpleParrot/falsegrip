@@ -1,9 +1,10 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { IconBack, IconDown, IconTrash, IconUp } from '../components/Icons'
+import { NumInput } from '../components/NumInput'
 import { db, newExercise, softDelete } from '../db'
 import { t } from '../i18n'
-import { EQUIPMENT, evenIntensities, EXERCISE_KINDS, FIELD_ORDER, kindOf, MUSCLE_GROUPS, now, uid, type Exercise, type FieldKey } from '../model'
+import { bwPctOf, EQUIPMENT, evenIntensities, EXERCISE_KINDS, FIELD_ORDER, kindOf, MUSCLE_GROUPS, now, uid, type Exercise, type FieldKey } from '../model'
 import { goBack } from '../router'
 
 const PRESETS: FieldKey[][] = [['reps'], ['weight', 'reps'], ['time'], ['weight', 'time'], ['reps', 'time']]
@@ -135,6 +136,22 @@ export function ExerciseEdit({ id }: { id: string }) {
               {t('exercise.unilateral')}
             </button>
           </div>
+        </div>
+
+        <div className="field">
+          <span>{t('exercise.bwPct')}</span>
+          <div className="bw-row">
+            <span className="pct">
+              <NumInput
+                className="text"
+                value={bwPctOf(ex)}
+                onChange={(n) => patch({ bwPct: Math.max(0, Math.min(100, Math.round(n ?? 0))) })}
+                ariaLabel={t('exercise.bwPct')}
+              />
+              %
+            </span>
+          </div>
+          <p className="muted small">{t('exercise.bwPctHint')}</p>
         </div>
         </>
         )}

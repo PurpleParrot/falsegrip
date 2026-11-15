@@ -601,13 +601,15 @@ h1 {
   flex: 1;
   min-width: 0;
 }
-.level-row .pct {
+.level-row .pct,
+.bw-row .pct {
   display: flex;
   align-items: center;
   gap: 2px;
   color: var(--muted);
 }
-.level-row .pct input {
+.level-row .pct input,
+.bw-row .pct input {
   width: 56px;
   flex: none;
   text-align: center;
@@ -635,6 +637,7 @@ h1 {
   font-weight: 600;
   text-align: left;
   margin-bottom: 12px;
+  gap: 10px;
 }
 .stepper {
   display: flex;
@@ -1169,4 +1172,52 @@ input.num:focus {
 .chip.static {
   display: inline-flex;
   align-items: center;
+}
+
+.bw-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.bw-row .pct input {
+  width: 72px;
+}
+.warn {
+  color: var(--accent-2);
+}
+
+.select-btn.static {
+  margin-top: -4px;
+  cursor: default;
+}
+.dot-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-block;
+}
+.compare-add {
+  display: block;
+  margin: 10px 0 4px;
+}
+.compare-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.compare-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.compare-row i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+.ink {
+  color: var(--text);
 }
