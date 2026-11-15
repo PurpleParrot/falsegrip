@@ -86,10 +86,15 @@ const SEED: Seed[] = [
   { name: 'Squat', bw: 0, fields: ['weight', 'reps'], muscles: ['legs'], eq: 'barbell' },
   { name: 'Lunge', bw: 0, fields: ['weight', 'reps'], unilateral: true, muscles: ['legs'], eq: 'dumbbell' },
   { name: 'Dumbbell Shoulder Press', bw: 0, fields: ['weight', 'reps'], muscles: ['shoulders'], eq: 'dumbbell' },
+  { name: 'Bench Press', bw: 0, fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'barbell' },
+  { name: 'Butterfly', bw: 0, fields: ['weight', 'reps'], muscles: ['chest'], eq: 'machine' },
+  { name: 'Biceps Curl', bw: 0, fields: ['weight', 'reps'], muscles: ['arms'], eq: 'dumbbell' },
+  { name: 'Triceps Extension', bw: 0, fields: ['weight', 'reps'], muscles: ['arms'], eq: 'dumbbell' },
+  { name: 'Shoulder Fly', bw: 0, fields: ['weight', 'reps'], muscles: ['shoulders'], eq: 'dumbbell' },
   { name: 'Stretching', kind: 'checklist', muscles: ['fullbody'], eq: 'floor', options: STRETCH_OPTIONS },
 ]
 
-const SEED_VERSION = 4
+const SEED_VERSION = 5
 
 function fromSeed(sd: Seed): Exercise {
   const intens = evenIntensities(sd.levels?.length ?? 0)
@@ -170,6 +175,12 @@ async function migrate(from: number) {
     for (const se of await db.sessions.toArray())
       if (se.blocks.some((b) => b.checked?.includes('Taylors Pose')))
         await db.sessions.update(se.id, { blocks: se.blocks.map((b) => ({ ...b, checked: fix(b.checked) })), updatedAt: t })
+  }
+  if (from < 5) {
+    // v5: gym exercises
+    const names = new Set((await db.exercises.toArray()).filter((e) => !e.deletedAt).map((e) => e.name.toLowerCase()))
+    for (const n of ['Bench Press', 'Butterfly', 'Biceps Curl', 'Triceps Extension', 'Shoulder Fly'])
+      if (!names.has(n.toLowerCase())) await db.exercises.put(fromSeed(SEED.find((x) => x.name === n)!))
   }
 }
 
