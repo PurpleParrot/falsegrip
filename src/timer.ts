@@ -161,14 +161,15 @@ function tick() {
   tone(880, ctx.currentTime, 0.12, 0.6)
 }
 
-/** end of rest: a cheerful rising major triad (C-E-G) */
+/** end of rest: a cheerful C-E arpeggio into a C major chord */
 function endTone() {
   if (!soundOn || !ctx) return
   if (ctx.state === 'suspended') void ctx.resume()
   const t0 = ctx.currentTime + 0.02
   tone(1046.5, t0, 0.13) // C6
   tone(1318.5, t0 + 0.14, 0.13) // E6
-  tone(1568, t0 + 0.28, 0.38) // G6
+  // final chord C-E-G-C, quieter per voice so the sum doesn't clip
+  for (const f of [1046.5, 1318.5, 1568, 2093]) tone(f, t0 + 0.28, 0.5, 0.3)
 }
 
 let lastTick = 0
