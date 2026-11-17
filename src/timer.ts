@@ -161,15 +161,63 @@ function tick() {
   tone(880, ctx.currentTime, 0.12, 0.6)
 }
 
-/** end of rest: G, B (leading tone), then a C major triad */
+/**
+ * Simple additive piano model: per note a few slightly stretched overtones
+ * (like stiff piano strings), higher ones decaying faster, two detuned
+ * "strings" for warmth and a short filtered noise burst for the hammer.
+ */
+function pianoNote(out: AudioNode, freq: number, at: number, vol: number) {
+  if (!ctx) return
+  const B = 0.0004 // inharmonicity
+  for (let n = 1; n <= 8; n++) {
+    const f = freq * n * Math.sqrt(1 + B * n * n)
+    if (f > 9000) break
+    const amp = (vol / Math.pow(n, 1.1)) * (n === 1 ? 1 : 0.6)
+    const decay = 2.6 / (1 + (n - 1) * 0.55) // seconds to fade
+    for (const detune of n === 1 ? [-1.5, 1.5] : [0]) {
+      const o = ctx.createOscillator()
+      const g = ctx.createGain()
+      o.frequency.value = f
+      o.detune.value = detune
+      g.gain.setValueAtTime(0.0001, at)
+      g.gain.exponentialRampToValueAtTime(amp, at + 0.004)
+      g.gain.exponentialRampToValueAtTime(amp * 0.5, at + 0.08)
+      g.gain.exponentialRampToValueAtTime(0.0001, at + decay)
+      o.connect(g).connect(out)
+      o.start(at)
+      o.stop(at + decay + 0.05)
+    }
+  }
+  // hammer
+  const len = Math.floor(ctx.sampleRate * 0.03)
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate)
+  const d = buf.getChannelData(0)
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2
+  const src = ctx.createBufferSource()
+  const lp = ctx.createBiquadFilter()
+  const hg = ctx.createGain()
+  src.buffer = buf
+  lp.type = 'lowpass'
+  lp.frequency.value = Math.min(4000, freq * 6)
+  hg.gain.value = vol * 0.25
+  src.connect(lp).connect(hg).connect(out)
+  src.start(at)
+}
+
+/** end of rest: a rolled C maj7 on the piano, all notes fading out together */
 function endTone() {
   if (!soundOn || !ctx) return
   if (ctx.state === 'suspended') void ctx.resume()
-  const t0 = ctx.currentTime + 0.02
-  tone(392, t0, 0.12) // G4
-  tone(494, t0 + 0.14, 0.13) // B4
-  // quieter per voice so the sum doesn't clip
-  for (const f of [523.3, 659.3, 784]) tone(f, t0 + 0.3, 0.55, 0.4) // C5 E5 G5
+  const t0 = ctx.currentTime + 0.03
+  const ring = 2.2
+  const bus = ctx.createGain()
+  const comp = ctx.createDynamicsCompressor()
+  bus.gain.setValueAtTime(1, t0)
+  bus.gain.setValueAtTime(1, t0 + ring - 0.6)
+  bus.gain.exponentialRampToValueAtTime(0.0001, t0 + ring)
+  bus.connect(comp).connect(ctx.destination)
+  // C3, E4, G4, B4: rolled from the bottom up
+  ;[130.8, 329.6, 392, 493.9].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
 }
 
 let lastTick = 0
