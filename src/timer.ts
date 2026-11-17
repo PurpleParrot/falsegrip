@@ -91,6 +91,40 @@ export function useTimer() {
 
 // ---------- Countdown alarm ----------
 
+const SOUND_KEY = 'falsegrip.timer.sound'
+let soundOn = (() => {
+  try {
+    return localStorage.getItem(SOUND_KEY) !== 'off'
+  } catch {
+    return true
+  }
+})()
+const soundListeners = new Set<() => void>()
+
+export function setSound(on: boolean) {
+  soundOn = on
+  try {
+    localStorage.setItem(SOUND_KEY, on ? 'on' : 'off')
+  } catch {
+    /* ignore */
+  }
+  soundListeners.forEach((l) => l())
+  if (on) {
+    unlockAudio()
+    endTone()
+  }
+}
+
+export function useSound() {
+  return useSyncExternalStore(
+    (l) => {
+      soundListeners.add(l)
+      return () => soundListeners.delete(l)
+    },
+    () => soundOn,
+  )
+}
+
 let ctx: AudioContext | null = null
 function unlockAudio() {
   try {
@@ -100,25 +134,55 @@ function unlockAudio() {
     /* no audio */
   }
 }
+// Browsers only allow audio after a user gesture. Unlock on any tap, so the
+// alarm also works after a reload with a countdown still running.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlockAudio, { passive: true })
+}
 
-function beep() {
+function tone(freq: number, at: number, dur: number, vol = 0.9) {
   if (!ctx) return
-  const t0 = ctx.currentTime
+  const o = ctx.createOscillator()
+  const g = ctx.createGain()
+  o.type = 'triangle'
+  o.frequency.value = freq
+  g.gain.setValueAtTime(0.0001, at)
+  g.gain.exponentialRampToValueAtTime(vol, at + 0.015)
+  g.gain.setValueAtTime(vol, at + dur - 0.05)
+  g.gain.exponentialRampToValueAtTime(0.0001, at + dur)
+  o.connect(g).connect(ctx.destination)
+  o.start(at)
+  o.stop(at + dur + 0.02)
+}
+
+/** short tick for the last 3 seconds */
+function tick() {
+  if (!soundOn || !ctx) return
+  tone(880, ctx.currentTime, 0.12, 0.6)
+}
+
+/** end of rest: three rising double beeps */
+function endTone() {
+  if (!soundOn || !ctx) return
+  if (ctx.state === 'suspended') void ctx.resume()
+  const t0 = ctx.currentTime + 0.02
   for (let i = 0; i < 3; i++) {
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.frequency.value = 880
-    g.gain.setValueAtTime(0.0001, t0 + i * 0.3)
-    g.gain.exponentialRampToValueAtTime(0.4, t0 + i * 0.3 + 0.02)
-    g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * 0.3 + 0.2)
-    o.connect(g).connect(ctx.destination)
-    o.start(t0 + i * 0.3)
-    o.stop(t0 + i * 0.3 + 0.22)
+    tone(1046, t0 + i * 0.45, 0.14)
+    tone(1318, t0 + i * 0.45 + 0.17, 0.2)
   }
 }
 
+let lastTick = 0
 setInterval(() => {
-  if (state.mode === 'countdown' && state.running && !state.alerted && displaySeconds() <= 0) {
+  if (state.mode !== 'countdown' || !state.running || state.alerted) return
+  const left = displaySeconds()
+  const sec = Math.ceil(left)
+  if (left > 0 && sec <= 3 && sec !== lastTick && state.total > 3) {
+    lastTick = sec
+    tick()
+  }
+  if (left <= 0) {
+    lastTick = 0
     // stop at zero so the header doesn't show a "running" 00:00 forever
     set({ alerted: true, running: false, acc: state.total * 1000 })
     try {
@@ -126,6 +190,6 @@ setInterval(() => {
     } catch {
       /* ignore */
     }
-    beep()
+    endTone()
   }
-}, 250)
+}, 100)

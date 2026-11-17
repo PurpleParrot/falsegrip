@@ -3,12 +3,13 @@ import { IconBack, IconClose, IconExpand, IconPause, IconPlay, IconReset } from 
 import { fmtClock } from '../format'
 import { t } from '../i18n'
 import { goBack, useOverlay } from '../router'
-import { displaySeconds, timer, useTimer } from '../timer'
+import { displaySeconds, setSound, timer, useSound, useTimer } from '../timer'
 
 const PRESETS = [30, 60, 90, 120, 180]
 
 export function Timer() {
   const s = useTimer()
+  const sound = useSound()
   const [full, setFull] = useState(false)
   useOverlay(full, () => setFull(false))
   const secs = displaySeconds(s)
@@ -92,6 +93,11 @@ export function Timer() {
                   {fmtClock(p)}
                 </button>
               ))}
+            </div>
+            <div className="chips center-chips">
+              <button className={`chip ${sound ? 'on' : ''}`} onClick={() => setSound(!sound)}>
+                {sound ? t('timer.soundOn') : t('timer.soundOff')}
+              </button>
             </div>
           </>
         )}

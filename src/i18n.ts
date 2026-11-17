@@ -192,6 +192,8 @@ const de = {
   'timer.pause': 'Pause',
   'timer.reset': 'Reset',
   'timer.fullscreen': 'Vollbild',
+  'timer.soundOn': '🔔 Signalton an',
+  'timer.soundOff': '🔕 Signalton aus',
 
   'settings.title': 'Einstellungen',
   'settings.theme': 'Aussehen',
