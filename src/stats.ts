@@ -188,7 +188,7 @@ export interface SessionTotal {
   sessionId: string
   /** kg × reps over all exercises that record reps */
   total: number
-  /** same, per muscle group (an exercise counts fully for each of its groups) */
+  /** same, per muscle group: the first (primary) group counts fully, further groups half */
   groups: Partial<Record<MuscleGroup, number>>
 }
 
@@ -209,7 +209,7 @@ export function sessionTotals(sessions: Session[], exercises: Map<string, Exerci
       }
       if (!vol) continue
       total += vol
-      for (const g of ex.muscleGroups) groups[g] = (groups[g] ?? 0) + vol
+      ex.muscleGroups.forEach((g, i) => (groups[g] = (groups[g] ?? 0) + (i === 0 ? vol : vol / 2)))
     }
     if (total > 0) out.push({ t: s.startedAt, sessionId: s.id, total: Math.round(total), groups })
   }

@@ -162,7 +162,7 @@ const de = {
   'totals.perSession': 'Volume pro Training',
   'totals.perGroup': 'Pro Muskelgruppe',
   'totals.hint': 'Summe aller Übungen mit Reps: (Körpergewicht × Anteil + Zusatzgewicht) × Reps. Halteübungen ohne Reps zählen nicht mit.',
-  'totals.hintGroup': 'Jede Übung zählt voll für alle ihre Muskelgruppen (Pull-up z. B. für Rücken und Arme).',
+  'totals.hintGroup': 'Die Hauptmuskelgruppe (die erste der Übung) zählt voll, weitere Gruppen zur Hälfte. Pull-up z. B.: Rücken 100 %, Arme 50 %.',
   'totals.avg': 'Ø pro Training',
   'totals.sum': 'gesamt',
   'stats.left': 'Links',
