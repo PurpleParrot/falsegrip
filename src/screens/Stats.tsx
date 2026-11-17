@@ -3,6 +3,7 @@ import { COMPARE_COLORS, COMPARE_MAX, CompareView, itemLabel, sharedMetrics, typ
 import { ExercisePicker } from '../components/ExercisePicker'
 import { IconChevron } from '../components/Icons'
 import { StatsView } from '../components/StatsView'
+import { TotalsView } from '../components/TotalsView'
 import { useExercises, useSessions, useTemplates } from '../hooks'
 import { t } from '../i18n'
 import type { Exercise } from '../model'
@@ -10,6 +11,7 @@ import { buildCsv, downloadFile, metricsFor } from '../stats'
 
 const KEY = 'falsegrip.stats.sel'
 const KEY_CMP = 'falsegrip.stats.compare'
+const KEY_VIEW = 'falsegrip.stats.view'
 
 type Sel = { exId: string; levelId: string | null }
 
@@ -41,6 +43,11 @@ export function Stats() {
   }
   const [sel, setSel] = useState<Sel | null>(() => load(KEY, null))
   const [extra, setExtra] = useState<Sel[]>(() => load(KEY_CMP, []))
+  const [view, setView] = useState<'exercises' | 'totals'>(() => load(KEY_VIEW, 'exercises'))
+  const switchView = (v: 'exercises' | 'totals') => {
+    setView(v)
+    store(KEY_VIEW, v)
+  }
 
   // default: most recently trained exercise
   const effective = useMemo(() => {
@@ -96,6 +103,17 @@ export function Stats() {
         </button>
       </header>
       <div className="pad-x">
+        <div className="segmented stats-switch">
+          <button className={view === 'exercises' ? 'on' : ''} onClick={() => switchView('exercises')}>
+            {t('stats.view.exercises')}
+          </button>
+          <button className={view === 'totals' ? 'on' : ''} onClick={() => switchView('totals')}>
+            {t('stats.view.totals')}
+          </button>
+        </div>
+        {view === 'totals' && sessions && <TotalsView sessions={sessions} exercises={map} />}
+        {view === 'exercises' && (
+        <>
         <button className="select-btn" onClick={() => openPicker('main')}>
           {comparing && <i className="dot-swatch" style={{ background: COMPARE_COLORS[0] }} />}
           <span className="grow">{main ? itemLabel(main) : t('stats.pickExercise')}</span>
@@ -117,6 +135,8 @@ export function Stats() {
         )}
         {main && sessions && !comparing && <StatsView key={main.ex.id + String(main.levelId)} ex={main.ex} levelId={main.levelId} sessions={sessions} />}
         {main && sessions && comparing && <CompareView items={items} sessions={sessions} />}
+        </>
+        )}
       </div>
       <ExercisePicker
         open={pickerOpen}

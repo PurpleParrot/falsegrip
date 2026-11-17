@@ -1356,3 +1356,42 @@ input.num:focus {
 .session-times input:focus {
   border-color: var(--accent);
 }
+
+/* Superset: thin accent frame around the linked exercise cards */
+.superset {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px 6px 6px;
+  border-radius: 20px;
+  border: 1.5px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.superset-label {
+  position: absolute;
+  top: -9px;
+  left: 16px;
+  padding: 0 8px;
+  background: var(--bg);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stats-switch {
+  margin-bottom: 14px;
+}
+.chip .dot-swatch {
+  margin-right: 2px;
+}
+.kpis.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.kpis.three > div {
+  padding: 10px 10px;
+}
+.kpis.three strong {
+  font-size: 19px;
+}

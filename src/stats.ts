@@ -1,5 +1,5 @@
 import type { TKey } from './i18n'
-import { bwPctOf, hasValue, type Exercise, type Session, type Side, type Vals } from './model'
+import { bwPctOf, hasValue, type Exercise, type MuscleGroup, type Session, type Side, type Vals } from './model'
 
 export type MetricId =
   | 'maxReps'
@@ -179,6 +179,41 @@ export function rangeStart(range: '1m' | '3m' | '1y' | 'all'): number {
   else if (range === '1y') d.setFullYear(d.getFullYear() - 1)
   else return 0
   return d.getTime()
+}
+
+// ---------- Totals across all exercises ----------
+
+export interface SessionTotal {
+  t: number
+  sessionId: string
+  /** kg × reps over all exercises that record reps */
+  total: number
+  /** same, per muscle group (an exercise counts fully for each of its groups) */
+  groups: Partial<Record<MuscleGroup, number>>
+}
+
+export function sessionTotals(sessions: Session[], exercises: Map<string, Exercise>, from: number, bodyweight?: number | null): SessionTotal[] {
+  const out: SessionTotal[] = []
+  const sorted = sessions.filter((s) => !s.deletedAt && s.startedAt >= from).sort((a, b) => a.startedAt - b.startedAt)
+  for (const s of sorted) {
+    let total = 0
+    const groups: Partial<Record<MuscleGroup, number>> = {}
+    for (const b of s.blocks) {
+      const ex = exercises.get(b.exerciseId)
+      if (!ex || (ex.kind ?? 'sets') !== 'sets' || !ex.fields.reps) continue
+      const share = bwPctOf(ex) / 100
+      let vol = 0
+      for (const set of b.sets) {
+        const bw = set.bodyweight ?? bodyweight ?? 0
+        for (const v of Object.values(set.sides)) if (hasValue(v) && v!.reps) vol += (bw * share + (v!.weight ?? 0)) * v!.reps
+      }
+      if (!vol) continue
+      total += vol
+      for (const g of ex.muscleGroups) groups[g] = (groups[g] ?? 0) + vol
+    }
+    if (total > 0) out.push({ t: s.startedAt, sessionId: s.id, total: Math.round(total), groups })
+  }
+  return out
 }
 
 // ---------- CSV export (spec 6.5) ----------

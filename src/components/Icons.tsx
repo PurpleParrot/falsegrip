@@ -60,3 +60,15 @@ export const IconSort = (p: P) => <Svg {...p}><path d="M7 4v16M3 8l4-4 4 4M17 20
 export const IconEdit = (p: P) => <Svg {...p}><path d="M12 20h9M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4Z" /></Svg>
 export const IconCalendar = (p: P) => <Svg {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></Svg>
 export const IconCopy = (p: P) => <Svg {...p}><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></Svg>
+export const IconLink = (p: P) => (
+  <Svg {...p}>
+    <path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5" />
+    <path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5" />
+  </Svg>
+)
+export const IconUnlink = (p: P) => (
+  <Svg {...p}>
+    <path d="m18.8 12.3 1.7-1.8a5 5 0 0 0-7-7l-1.8 1.7M5.2 11.7l-1.7 1.8a5 5 0 0 0 7 7l1.8-1.7" />
+    <path d="M8 2v3M2 8h3M16 22v-3M22 16h-3" />
+  </Svg>
+)

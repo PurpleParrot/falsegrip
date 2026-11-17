@@ -17,6 +17,8 @@ import {
   IconTimer,
   IconTrash,
   IconUp,
+  IconLink,
+  IconUnlink,
 } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
 import { Menu, Sheet } from '../components/Sheet'
@@ -26,7 +28,7 @@ import { db } from '../db'
 import { exerciseName, fieldLabel, fmtClock, fmtDate, fmtNum, fmtTime, toLocalInput } from '../format'
 import { useExercises, useSessions, useSettings } from '../hooks'
 import { t } from '../i18n'
-import { blockFilled, exKey, fieldsOf, hasValue, kindOf, setFilled, sidesOf, type Block, type Exercise, type Session, type Side, type Vals } from '../model'
+import { blockFilled, exKey, fieldsOf, groupSupersets, hasValue, kindOf, setFilled, sidesOf, type Block, type Exercise, type Session, type Side, type Template, type Vals } from '../model'
 import { goBack, navigate } from '../router'
 import {
   addBlock,
@@ -49,6 +51,9 @@ import {
   swapBlock,
   updateSession,
   type LastValues,
+  findTemplateByName,
+  linkBlockWithNext,
+  unlinkBlock,
 } from '../sessions'
 import { displaySeconds, useTimer } from '../timer'
 
@@ -68,6 +73,7 @@ export function ActiveSession({ id }: { id: string }) {
   const [openRow, setOpenRow] = useState<string | null>(null)
   const [overlay, setOverlay] = useState<{ kind: 'history' | 'stats'; block: Block } | null>(null)
   const [tplName, setTplName] = useState<string | null>(null)
+  const [tplConflict, setTplConflict] = useState<Template | null>(null)
   const [toast, setToast] = useState('')
   const [noteFor, setNoteFor] = useState<{ blockId: string; setId: string; text: string } | null>(null)
 
@@ -112,6 +118,15 @@ export function ActiveSession({ id }: { id: string }) {
   const leave = async () => {
     if (sessionIsEmpty(session)) await deleteSession(session.id)
     goBack('/')
+  }
+
+  const saveTpl = async (overwrite?: Template) => {
+    const name = tplName?.trim() || t('start.free')
+    await saveAsTemplate(session, name, overwrite)
+    setTplName(null)
+    setTplConflict(null)
+    setToast(t(overwrite ? 'session.templateOverwritten' : 'session.templateSaved', { name }))
+    setTimeout(() => setToast(''), 2500)
   }
 
   const onPick = async (ex: Exercise, levelId: string | null) => {
@@ -183,11 +198,19 @@ export function ActiveSession({ id }: { id: string }) {
       ) : (
         <div className="cards">
           {session.blocks.length === 0 && <p className="muted center hint">{t('session.hint')}</p>}
-          {session.blocks.map((b) => (
+          {groupSupersets(session.blocks).map((g) => {
+            const card = (b: Block) => {
+              const i = session.blocks.indexOf(b)
+              const next = session.blocks[i + 1]
+              return (
             <ExerciseCard
               key={b.id}
               session={session}
               block={b}
+              inSuperset={!!g.id}
+              canLinkNext={!!next && (!b.supersetId || next.supersetId !== b.supersetId)}
+              onLinkNext={() => linkBlockWithNext(session.id, b.id)}
+              onUnlink={() => unlinkBlock(session.id, b.id)}
               ex={exMap.get(b.exerciseId)}
               last={last}
               source={settings.suggestionSource}
@@ -200,7 +223,17 @@ export function ActiveSession({ id }: { id: string }) {
               onOverlay={(kind) => setOverlay({ kind, block: b })}
               onNote={(setId, text) => setNoteFor({ blockId: b.id, setId, text })}
             />
-          ))}
+              )
+            }
+            return g.id ? (
+              <div key={g.id} className="superset">
+                <span className="superset-label">{t('superset.label')}</span>
+                {g.items.map(card)}
+              </div>
+            ) : (
+              card(g.items[0])
+            )
+          })}
           <button className="btn big-add" onClick={() => setPickerOpen(true)}>
             {t('session.addExercise')}
           </button>
@@ -272,25 +305,49 @@ export function ActiveSession({ id }: { id: string }) {
         )}
       </Sheet>
 
-      <Sheet open={tplName !== null} onClose={() => setTplName(null)} title={t('session.saveTemplate')}>
+      <Sheet
+        open={tplName !== null}
+        onClose={() => {
+          setTplName(null)
+          setTplConflict(null)
+        }}
+        title={t('session.saveTemplate')}
+      >
         {tplName !== null && (
           <div className="form">
             <label>
               <span>{t('template.name')}</span>
-              <input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} />
+              <input
+                autoFocus
+                value={tplName}
+                onChange={(e) => {
+                  setTplName(e.target.value)
+                  setTplConflict(null)
+                }}
+              />
             </label>
-            <button
-              className="btn primary block"
-              onClick={async () => {
-                const name = tplName.trim() || t('start.free')
-                await saveAsTemplate(session, name)
-                setTplName(null)
-                setToast(t('session.templateSaved', { name }))
-                setTimeout(() => setToast(''), 2500)
-              }}
-            >
-              {t('common.save')}
-            </button>
+            {tplConflict ? (
+              <>
+                <p className="small">{t('session.templateExists', { name: tplConflict.name })}</p>
+                <button className="btn primary block" onClick={() => saveTpl(tplConflict)}>
+                  {t('session.templateOverwrite')}
+                </button>
+                <button className="btn block" onClick={() => saveTpl()}>
+                  {t('session.templateSaveNew')}
+                </button>
+              </>
+            ) : (
+              <button
+                className="btn primary block"
+                onClick={async () => {
+                  const existing = await findTemplateByName(tplName.trim() || t('start.free'))
+                  if (existing) setTplConflict(existing)
+                  else await saveTpl()
+                }}
+              >
+                {t('common.save')}
+              </button>
+            )}
           </div>
         )}
       </Sheet>
@@ -333,9 +390,17 @@ function ExerciseCard({
   onSwap,
   onOverlay,
   onNote,
+  inSuperset,
+  canLinkNext,
+  onLinkNext,
+  onUnlink,
 }: {
   session: Session
   block: Block
+  inSuperset: boolean
+  canLinkNext: boolean
+  onLinkNext: () => void
+  onUnlink: () => void
   ex: Exercise | undefined
   last: LastValues
   source: 'last' | 'targets'
@@ -453,6 +518,8 @@ function ExerciseCard({
         title={exerciseName(ex, block.levelId)}
         items={[
           { label: t('session.swapExercise'), icon: <IconSwap />, onClick: onSwap },
+          ...(canLinkNext ? [{ label: t('superset.linkNext'), icon: <IconLink />, onClick: onLinkNext }] : []),
+          ...(inSuperset ? [{ label: t('superset.unlink'), icon: <IconUnlink />, onClick: onUnlink }] : []),
           {
             label: t('session.removeExercise'),
             icon: <IconTrash />,

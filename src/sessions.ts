@@ -4,6 +4,9 @@ import {
   kindOf,
   exKey,
   hasValue,
+  linkWithNext,
+  normalizeSupersets,
+  unlink,
   now,
   setFilled,
   sidesOf,
@@ -79,6 +82,13 @@ function findBlock(s: Session, blockId: string) {
 
 export async function startSession(template: Template | null, exercises: Map<string, Exercise>): Promise<string> {
   const t = now()
+  // fresh superset ids per session
+  const groupIds = new Map<string, string>()
+  const newGroup = (g?: string | null) => {
+    if (!g) return null
+    if (!groupIds.has(g)) groupIds.set(g, uid())
+    return groupIds.get(g)!
+  }
   const session: Session = {
     id: uid(),
     createdAt: t,
@@ -96,6 +106,7 @@ export async function startSession(template: Template | null, exercises: Map<str
         exerciseId: it.exerciseId,
         levelId: it.levelId ?? null,
         targets: it.targets ?? null,
+        supersetId: newGroup(it.supersetId),
         sets:
           kindOf(exercises.get(it.exerciseId)) === 'sets'
             ? Array.from({ length: Math.max(1, it.sets) }, () => emptySet(exercises.get(it.exerciseId)))
@@ -141,7 +152,7 @@ export async function swapBlock(sessionId: string, blockId: string, ex: Exercise
 
 export async function removeBlock(sessionId: string, blockId: string) {
   await updateSession(sessionId, (s) => {
-    s.blocks = s.blocks.filter((b) => b.id !== blockId)
+    s.blocks = normalizeSupersets(s.blocks.filter((b) => b.id !== blockId))
   })
 }
 
@@ -151,6 +162,19 @@ export async function moveBlock(sessionId: string, blockId: string, dir: -1 | 1)
     const j = i + dir
     if (i < 0 || j < 0 || j >= s.blocks.length) return
     ;[s.blocks[i], s.blocks[j]] = [s.blocks[j], s.blocks[i]]
+    s.blocks = normalizeSupersets(s.blocks)
+  })
+}
+
+export async function linkBlockWithNext(sessionId: string, blockId: string) {
+  await updateSession(sessionId, (s) => {
+    s.blocks = linkWithNext(s.blocks, s.blocks.findIndex((b) => b.id === blockId))
+  })
+}
+
+export async function unlinkBlock(sessionId: string, blockId: string) {
+  await updateSession(sessionId, (s) => {
+    s.blocks = unlink(s.blocks, s.blocks.findIndex((b) => b.id === blockId))
   })
 }
 
@@ -241,24 +265,32 @@ export async function addOption(sessionId: string, blockId: string, ex: Exercise
 }
 
 /** Creates a template from a session: same exercises/levels, set count = sets used. */
-export async function saveAsTemplate(session: Session, name: string): Promise<string> {
+/** Save the session's exercises as a template. With `overwrite`, that template's exercises are replaced. */
+export async function saveAsTemplate(session: Session, name: string, overwrite?: Template): Promise<string> {
   const t = now()
-  const tpl: Template = {
-    id: uid(),
-    createdAt: t,
-    updatedAt: t,
-    deletedAt: null,
-    name: name.trim() || session.name || 'Template',
-    items: session.blocks.map((b) => ({
+  const groupIds = new Map<string, string>()
+  const items = normalizeSupersets(session.blocks).map((b) => {
+    if (b.supersetId && !groupIds.has(b.supersetId)) groupIds.set(b.supersetId, uid())
+    return {
       id: uid(),
       exerciseId: b.exerciseId,
       levelId: b.levelId ?? null,
       sets: Math.max(1, b.sets.filter(setFilled).length || b.sets.length),
       targets: null,
-    })),
-  }
+      supersetId: b.supersetId ? groupIds.get(b.supersetId)! : null,
+    }
+  })
+  const tpl: Template = overwrite
+    ? { ...overwrite, name: name.trim() || overwrite.name, items, updatedAt: t }
+    : { id: uid(), createdAt: t, updatedAt: t, deletedAt: null, name: name.trim() || session.name || 'Template', items }
   await db.templates.put(tpl)
   return tpl.id
+}
+
+/** Live template with this name (case-insensitive), if any. */
+export async function findTemplateByName(name: string): Promise<Template | undefined> {
+  const n = name.trim().toLowerCase()
+  return (await db.templates.toArray()).find((x) => !x.deletedAt && x.name.trim().toLowerCase() === n)
 }
 
 /** Returns true if the session was discarded because it was empty. */

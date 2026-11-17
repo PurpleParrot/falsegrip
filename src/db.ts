@@ -64,7 +64,7 @@ interface Seed {
 }
 
 export const STRETCH_OPTIONS = [
-  'Good Mornings', 'Hip Flexors', 'Baby Pose', 'Hamstrings', 'Chest', 'Lats', 'Pancake', 'Tailor Pose',
+  'Good Mornings', 'Hip Flexors', 'Log Sit', 'Baby Pose', 'Hamstrings', 'Chest', 'Lats', 'Pancake', 'Tailor Pose',
   'Front Split', 'Side Split', 'Bridge', 'German Hang', 'Dead Hang', 'Wrist', 'Shoulders',
 ]
 
@@ -84,6 +84,7 @@ const SEED: Seed[] = [
   { name: 'Handstand Hold', bw: 100, fields: ['time'], muscles: ['shoulders'], eq: 'floor', levels: ['Wall', 'Freestanding'] },
   { name: 'Deadlift', bw: 0, fields: ['weight', 'reps'], muscles: ['legs', 'back'], eq: 'barbell' },
   { name: 'Squat', bw: 0, fields: ['weight', 'reps'], muscles: ['legs'], eq: 'barbell' },
+  { name: 'Sissy Squat', bw: 80, fields: ['weight', 'reps'], muscles: ['legs'], eq: 'floor' },
   { name: 'Lunge', bw: 0, fields: ['weight', 'reps'], unilateral: true, muscles: ['legs'], eq: 'dumbbell' },
   { name: 'Dumbbell Shoulder Press', bw: 0, fields: ['weight', 'reps'], muscles: ['shoulders'], eq: 'dumbbell' },
   { name: 'Bench Press', bw: 0, fields: ['weight', 'reps'], muscles: ['chest', 'arms'], eq: 'barbell' },
@@ -94,7 +95,7 @@ const SEED: Seed[] = [
   { name: 'Stretching', kind: 'checklist', muscles: ['fullbody'], eq: 'floor', options: STRETCH_OPTIONS },
 ]
 
-const SEED_VERSION = 6
+const SEED_VERSION = 7
 
 function fromSeed(sd: Seed): Exercise {
   const intens = evenIntensities(sd.levels?.length ?? 0)
@@ -188,6 +189,19 @@ async function migrate(from: number) {
     for (const ex of await db.exercises.toArray())
       if (!ex.deletedAt && /front lever/i.test(ex.name))
         await db.exercises.update(ex.id, { fields: { ...ex.fields, reps: true, time: true }, updatedAt: t })
+  }
+  if (from < 7) {
+    // v7: Sissy Squat, stretch "Log Sit"
+    const t = now()
+    const all = (await db.exercises.toArray()).filter((e) => !e.deletedAt)
+    if (!all.some((e) => e.name.toLowerCase() === 'sissy squat')) await db.exercises.put(fromSeed(SEED.find((x) => x.name === 'Sissy Squat')!))
+    for (const ex of all)
+      if (ex.name === 'Stretching' && !ex.options?.includes('Log Sit')) {
+        const opts = [...(ex.options ?? [])]
+        const at = opts.indexOf('Hip Flexors')
+        opts.splice(at >= 0 ? at + 1 : opts.length, 0, 'Log Sit')
+        await db.exercises.update(ex.id, { options: opts, updatedAt: t })
+      }
   }
 }
 

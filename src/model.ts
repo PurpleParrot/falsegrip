@@ -75,6 +75,8 @@ export interface Block {
   checked?: string[]
   /** target values copied from the template (used when suggestion source = targets) */
   targets?: Vals | null
+  /** consecutive blocks with the same id form a superset */
+  supersetId?: string | null
 }
 
 export interface Session extends Meta {
@@ -92,6 +94,8 @@ export interface TemplateItem {
   levelId?: string | null
   sets: number
   targets?: Vals | null
+  /** consecutive items with the same id form a superset */
+  supersetId?: string | null
 }
 
 export interface Template extends Meta {
@@ -167,4 +171,69 @@ export function exKey(exerciseId: string, levelId?: string | null) {
 export function bwPctOf(ex: Exercise): number {
   if (typeof ex.bwPct === 'number') return ex.bwPct
   return ['barbell', 'dumbbell', 'machine'].includes(ex.equipment) ? 0 : 100
+}
+
+// ---------- Supersets ----------
+
+/** Clear superset ids that no longer join at least two neighbouring entries. */
+export function normalizeSupersets<T extends { supersetId?: string | null }>(list: T[]): T[] {
+  return list.map((x, i) => {
+    if (!x.supersetId) return x
+    const linked = list[i - 1]?.supersetId === x.supersetId || list[i + 1]?.supersetId === x.supersetId
+    return linked ? x : { ...x, supersetId: null }
+  })
+}
+
+/** Join entry i with entry i+1 (merging existing groups). */
+export function linkWithNext<T extends { supersetId?: string | null }>(list: T[], i: number): T[] {
+  const a = list[i]
+  const b = list[i + 1]
+  if (!a || !b) return list
+  const id = a.supersetId ?? b.supersetId ?? uid()
+  const old = b.supersetId && b.supersetId !== id ? b.supersetId : null
+  return list.map((x, j) => (j === i || j === i + 1 || (old && x.supersetId === old) ? { ...x, supersetId: id } : x))
+}
+
+/** Take entry i out of its superset. */
+export function unlink<T extends { supersetId?: string | null }>(list: T[], i: number): T[] {
+  const id = list[i]?.supersetId
+  if (!id) return list
+  // split the group at i: entries after i get a fresh id so they stay together
+  const fresh = uid()
+  let after = false
+  const out = list.map((x, j) => {
+    if (j === i) {
+      after = true
+      return { ...x, supersetId: null }
+    }
+    if (after && x.supersetId === id) return { ...x, supersetId: fresh }
+    return x
+  })
+  return normalizeSupersets(out)
+}
+
+/** Split a superset between entry i and i+1. */
+export function splitAfter<T extends { supersetId?: string | null }>(list: T[], i: number): T[] {
+  const id = list[i]?.supersetId
+  if (!id || list[i + 1]?.supersetId !== id) return list
+  const fresh = uid()
+  let run = true
+  const out = list.map((x, j) => {
+    if (j <= i) return x
+    if (run && x.supersetId === id) return { ...x, supersetId: fresh }
+    run = false
+    return x
+  })
+  return normalizeSupersets(out)
+}
+
+/** Group consecutive entries: superset runs (2+) become one group, others stay single. */
+export function groupSupersets<T extends { supersetId?: string | null }>(list: T[]): { id: string | null; items: T[] }[] {
+  const out: { id: string | null; items: T[] }[] = []
+  for (const x of list) {
+    const lastG = out[out.length - 1]
+    if (x.supersetId && lastG && lastG.id === x.supersetId) lastG.items.push(x)
+    else out.push({ id: x.supersetId ?? null, items: [x] })
+  }
+  return out.map((g) => (g.items.length < 2 ? { ...g, id: null } : g))
 }

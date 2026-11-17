@@ -1,13 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { ExercisePicker } from '../components/ExercisePicker'
-import { IconBack, IconDown, IconTrash, IconUp } from '../components/Icons'
+import { IconBack, IconDown, IconLink, IconTrash, IconUnlink, IconUp } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
 import { db, softDelete } from '../db'
 import { exerciseName, fieldLabel } from '../format'
 import { useExercises } from '../hooks'
 import { t } from '../i18n'
-import { fieldsOf, kindOf, now, uid, type Template, type TemplateItem } from '../model'
+import { fieldsOf, groupSupersets, kindOf, linkWithNext, normalizeSupersets, now, splitAfter, uid, type Template, type TemplateItem } from '../model'
 import { goBack } from '../router'
 
 function blank(): Template {
@@ -29,7 +29,7 @@ export function TemplateEdit({ id }: { id: string }) {
 
   if (!tpl) return <div className="screen" />
 
-  const setItems = (items: TemplateItem[]) => setTpl({ ...tpl, items })
+  const setItems = (items: TemplateItem[]) => setTpl({ ...tpl, items: normalizeSupersets(items) })
   const patchItem = (iid: string, p: Partial<TemplateItem>) => setItems(tpl.items.map((x) => (x.id === iid ? { ...x, ...p } : x)))
   const move = (i: number, d: number) => {
     const a = [...tpl.items]
@@ -63,13 +63,25 @@ export function TemplateEdit({ id }: { id: string }) {
           <input value={tpl.name} placeholder={t('template.namePlaceholder')} onChange={(e) => setTpl({ ...tpl, name: e.target.value })} />
         </label>
 
-        {tpl.items.map((it, i) => {
+        {groupSupersets(tpl.items).map((g) => {
+          const card = (it: TemplateItem) => {
+          const i = tpl.items.indexOf(it)
+          const next = tpl.items[i + 1]
+          const linkedNext = !!it.supersetId && next?.supersetId === it.supersetId
           const ex = map.get(it.exerciseId)
           const fields = ex ? fieldsOf(ex) : []
           return (
             <div key={it.id} className="card tpl-item">
               <div className="tpl-item-head">
                 <strong className="grow">{exerciseName(ex, it.levelId)}</strong>
+                <button
+                  className={`icon-btn ${linkedNext ? 'accent' : ''}`}
+                  disabled={!next}
+                  aria-label={linkedNext ? t('superset.split') : t('superset.linkNext')}
+                  onClick={() => setItems(linkedNext ? splitAfter(tpl.items, i) : linkWithNext(tpl.items, i))}
+                >
+                  {linkedNext ? <IconUnlink size={18} /> : <IconLink size={18} />}
+                </button>
                 <button className="icon-btn" disabled={i === 0} onClick={() => move(i, -1)}>
                   <IconUp size={18} />
                 </button>
@@ -117,6 +129,15 @@ export function TemplateEdit({ id }: { id: string }) {
                 </div>
               )}
             </div>
+          )
+          }
+          return g.id ? (
+            <div key={g.id} className="superset">
+              <span className="superset-label">{t('superset.label')}</span>
+              {g.items.map(card)}
+            </div>
+          ) : (
+            card(g.items[0])
           )
         })}
 
