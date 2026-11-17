@@ -161,19 +161,15 @@ function tick() {
   tone(880, ctx.currentTime, 0.12, 0.6)
 }
 
-/**
- * end of rest: a tiny cadence. G, then the tritone B+F (the tension of a G7)
- * resolving into a C major chord (C-E-G-C).
- */
+/** end of rest: G, B (leading tone), then a C major triad */
 function endTone() {
   if (!soundOn || !ctx) return
   if (ctx.state === 'suspended') void ctx.resume()
   const t0 = ctx.currentTime + 0.02
   tone(392, t0, 0.12) // G4
-  tone(494, t0 + 0.14, 0.13, 0.5) // B4  } tritone,
-  tone(698.5, t0 + 0.14, 0.13, 0.5) // F5 } wants to resolve
-  // B -> C, F -> E: quieter per voice so the sum doesn't clip
-  for (const f of [523.3, 659.3, 784, 1046.5]) tone(f, t0 + 0.3, 0.55, 0.32)
+  tone(494, t0 + 0.14, 0.13) // B4
+  // quieter per voice so the sum doesn't clip
+  for (const f of [523.3, 659.3, 784]) tone(f, t0 + 0.3, 0.55, 0.4) // C5 E5 G5
 }
 
 let lastTick = 0
