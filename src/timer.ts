@@ -161,15 +161,34 @@ function tick() {
   tone(880, ctx.currentTime, 0.12, 0.6)
 }
 
-/** end of rest: three rising double beeps */
+/** end of rest: a short cartoon "boing" */
 function endTone() {
   if (!soundOn || !ctx) return
   if (ctx.state === 'suspended') void ctx.resume()
   const t0 = ctx.currentTime + 0.02
-  for (let i = 0; i < 3; i++) {
-    tone(1046, t0 + i * 0.45, 0.14)
-    tone(1318, t0 + i * 0.45 + 0.17, 0.2)
-  }
+  const dur = 0.7
+  const o = ctx.createOscillator()
+  const g = ctx.createGain()
+  // wobble: an LFO modulates the pitch, fading out like a spring settling
+  const lfo = ctx.createOscillator()
+  const depth = ctx.createGain()
+  o.type = 'triangle'
+  o.frequency.setValueAtTime(180, t0)
+  o.frequency.exponentialRampToValueAtTime(520, t0 + 0.12)
+  o.frequency.exponentialRampToValueAtTime(330, t0 + dur)
+  lfo.frequency.setValueAtTime(22, t0)
+  lfo.frequency.linearRampToValueAtTime(12, t0 + dur)
+  depth.gain.setValueAtTime(140, t0)
+  depth.gain.exponentialRampToValueAtTime(5, t0 + dur)
+  g.gain.setValueAtTime(0.0001, t0)
+  g.gain.exponentialRampToValueAtTime(0.9, t0 + 0.02)
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur)
+  lfo.connect(depth).connect(o.frequency)
+  o.connect(g).connect(ctx.destination)
+  lfo.start(t0)
+  o.start(t0)
+  lfo.stop(t0 + dur + 0.02)
+  o.stop(t0 + dur + 0.02)
 }
 
 let lastTick = 0
