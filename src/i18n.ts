@@ -222,6 +222,8 @@ const de = {
   'backupReminder.text': 'Deine Trainings sind nur im Browser auf diesem Gerät gespeichert. Wenn du den Cache leerst oder die App entfernst, gehen sie verloren. Speicher jetzt ein Backup, das dauert nur einen Tipp.',
   'backupReminder.now': 'Backup jetzt speichern',
   'backupReminder.later': 'Später',
+  'settings.share': 'App teilen (Link kopieren)',
+  'settings.shareCopied': 'Link kopiert. Schick ihn deinen Freunden!',
   'settings.version': 'Version',
 
   'common.cancel': 'Abbrechen',

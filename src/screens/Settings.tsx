@@ -13,6 +13,7 @@ export function Settings() {
   const s = useSettings()
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
+  const [shareMsg, setShareMsg] = useState('')
   const [persisted, setPersisted] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -119,6 +120,29 @@ export function Settings() {
           <strong>{t('settings.dataWarningTitle')}</strong>
           <p className="small">{t('settings.dataWarning')}</p>
         </div>
+
+        <button
+          className="btn block"
+          onClick={async () => {
+            const url = location.origin + import.meta.env.BASE_URL
+            try {
+              await navigator.clipboard.writeText(url)
+            } catch {
+              // fallback for insecure contexts / old browsers
+              const ta = document.createElement('textarea')
+              ta.value = url
+              document.body.appendChild(ta)
+              ta.select()
+              document.execCommand('copy')
+              ta.remove()
+            }
+            setShareMsg(t('settings.shareCopied'))
+            setTimeout(() => setShareMsg(''), 2500)
+          }}
+        >
+          {t('settings.share')}
+        </button>
+        {shareMsg && <p className="accent small center">{shareMsg}</p>}
 
         <p className="muted small center">
           Falsegrip · {t('settings.version')} {__APP_VERSION__}
