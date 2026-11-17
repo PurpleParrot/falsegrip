@@ -216,8 +216,8 @@ function endTone() {
   bus.gain.setValueAtTime(1, t0 + ring - 0.6)
   bus.gain.exponentialRampToValueAtTime(0.0001, t0 + ring)
   bus.connect(comp).connect(ctx.destination)
-  // C3, E4, G4, B4: rolled from the bottom up
-  ;[130.8, 329.6, 392, 493.9].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
+  // C4, E5, G5, B5: rolled from the bottom up
+  ;[261.6, 659.3, 784, 987.8].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
 }
 
 let lastTick = 0
