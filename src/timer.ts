@@ -140,27 +140,6 @@ if (typeof window !== 'undefined') {
   window.addEventListener('pointerdown', unlockAudio, { passive: true })
 }
 
-function tone(freq: number, at: number, dur: number, vol = 0.9) {
-  if (!ctx) return
-  const o = ctx.createOscillator()
-  const g = ctx.createGain()
-  o.type = 'triangle'
-  o.frequency.value = freq
-  g.gain.setValueAtTime(0.0001, at)
-  g.gain.exponentialRampToValueAtTime(vol, at + 0.015)
-  g.gain.setValueAtTime(vol, at + dur - 0.05)
-  g.gain.exponentialRampToValueAtTime(0.0001, at + dur)
-  o.connect(g).connect(ctx.destination)
-  o.start(at)
-  o.stop(at + dur + 0.02)
-}
-
-/** short tick for the last 3 seconds */
-function tick() {
-  if (!soundOn || !ctx) return
-  tone(880, ctx.currentTime, 0.12, 0.6)
-}
-
 /**
  * Simple additive piano model: per note a few slightly stretched overtones
  * (like stiff piano strings), higher ones decaying faster, two detuned
@@ -204,6 +183,17 @@ function pianoNote(out: AudioNode, freq: number, at: number, vol: number) {
   src.start(at)
 }
 
+/** last 3 seconds: a short piano F3 each */
+function tick() {
+  if (!soundOn || !ctx) return
+  const t0 = ctx.currentTime + 0.01
+  const bus = ctx.createGain()
+  bus.gain.setValueAtTime(1, t0 + 0.25)
+  bus.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5)
+  bus.connect(ctx.destination)
+  pianoNote(bus, 174.6, t0, 0.5)
+}
+
 /** end of rest: a rolled maj7 chord on the piano, all notes fading out together */
 function endTone() {
   if (!soundOn || !ctx) return
@@ -216,8 +206,8 @@ function endTone() {
   bus.gain.setValueAtTime(1, t0 + ring - 0.6)
   bus.gain.exponentialRampToValueAtTime(0.0001, t0 + ring)
   bus.connect(comp).connect(ctx.destination)
-  // F3, A4, C5, E5 (F maj7): rolled from the bottom up
-  ;[174.6, 440, 523.3, 659.3].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
+  // F3, A4, C5, E5, F5 (F maj7): rolled from the bottom up
+  ;[174.6, 440, 523.3, 659.3, 698.5].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
 }
 
 let lastTick = 0
