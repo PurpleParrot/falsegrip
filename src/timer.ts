@@ -183,7 +183,7 @@ function pianoNote(out: AudioNode, freq: number, at: number, vol: number) {
   src.start(at)
 }
 
-/** last 3 seconds: a short piano F3 each */
+/** last 3 seconds: a short piano F4 each */
 function tick() {
   if (!soundOn || !ctx) return
   const t0 = ctx.currentTime + 0.01
@@ -191,7 +191,7 @@ function tick() {
   bus.gain.setValueAtTime(1, t0 + 0.25)
   bus.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5)
   bus.connect(ctx.destination)
-  pianoNote(bus, 174.6, t0, 0.5)
+  pianoNote(bus, 349.2, t0, 0.5)
 }
 
 /** end of rest: a rolled maj7 chord on the piano, all notes fading out together */
@@ -206,8 +206,8 @@ function endTone() {
   bus.gain.setValueAtTime(1, t0 + ring - 0.6)
   bus.gain.exponentialRampToValueAtTime(0.0001, t0 + ring)
   bus.connect(comp).connect(ctx.destination)
-  // F3, A4, C5, E5, F5 (F maj7): rolled from the bottom up
-  ;[174.6, 440, 523.3, 659.3, 698.5].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, i === 0 ? 0.45 : 0.32))
+  // F4, A4, C5, E5, F5 (F maj7): rolled from the bottom up
+  ;[349.2, 440, 523.3, 659.3, 698.5].forEach((f, i) => pianoNote(bus, f, t0 + i * 0.04, 0.3))
 }
 
 let lastTick = 0
