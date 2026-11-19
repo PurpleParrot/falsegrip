@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { t } from '../i18n'
+import type { PrMark } from '../sessions'
 
 const COLORS = ['var(--accent)', 'var(--accent-2)', '#f5c542', 'var(--text)']
 const PIECES = 14
@@ -32,22 +33,26 @@ function makePieces(): Piece[] {
 const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /**
- * Trophy on a set number. With `celebrate` (a record that was just entered) it pops
- * and throws a short burst of confetti. The confetti is drawn in a fixed layer so the
- * swipe row's overflow doesn't clip it.
+ * Trophy on a set number. When a new, better value is entered it pops and throws a short
+ * burst of confetti. `seen` (owned by the screen, survives the badge unmounting while a
+ * number is retyped) remembers which value of each row was already celebrated, so the
+ * same value never celebrates twice, and a tie with another set never celebrates.
+ * The confetti is drawn in a fixed layer so the swipe row's overflow doesn't clip it.
  */
-export function PrBadge({ celebrate }: { celebrate: boolean }) {
+export function PrBadge({ rowId, mark, seen }: { rowId: string; mark: PrMark; seen: Map<string, string> | null }) {
   const ref = useRef<HTMLSpanElement>(null)
   const [burst, setBurst] = useState<{ x: number; y: number; pieces: Piece[] } | null>(null)
-  const [pop] = useState(celebrate)
+  const [pop, setPop] = useState(0)
 
   useLayoutEffect(() => {
-    if (!celebrate || reducedMotion() || !ref.current) return
+    if (!seen || seen.get(rowId) === mark.sig) return
+    seen.set(rowId, mark.sig)
+    if (mark.tie) return
+    setPop((x) => x + 1)
+    if (reducedMotion() || !ref.current) return
     const r = ref.current.getBoundingClientRect()
     setBurst({ x: r.left + r.width / 2, y: r.top + r.height / 2, pieces: makePieces() })
-    // only on mount: a record that is already shown doesn't celebrate again
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [rowId, mark.sig, mark.tie, seen])
 
   useEffect(() => {
     if (!burst) return
@@ -57,7 +62,7 @@ export function PrBadge({ celebrate }: { celebrate: boolean }) {
 
   return (
     <>
-      <span ref={ref} className={`pr-badge ${pop ? 'celebrate' : ''}`} title={t('session.pr')} aria-label={t('session.pr')}>
+      <span key={pop} ref={ref} className={`pr-badge ${pop ? 'celebrate' : ''}`} title={t('session.pr')} aria-label={t('session.pr')}>
         🏆
       </span>
       {burst &&

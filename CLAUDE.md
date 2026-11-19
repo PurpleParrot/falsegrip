@@ -64,7 +64,11 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - **Start- und Endzeit:** Ein Tippen auf den Trainingsnamen klappt Start/Ende (zwei Zeiteingaben) und die Notiz auf bzw. zu.
 - **Löschen:** Beim Entfernen einer Übung fragt die App nach, im Training und in der Vorlage.
 - **Vorlagen:** Gibt es schon eine Vorlage mit demselben Namen, fragt die App „Überschreiben“ oder „Als neue Vorlage speichern“.
-- **Bestleistungen:** Ein 🏆 an der Satznummer, wenn kein früherer Satz derselben Übung/Stufe in allen erfassten Feldern mindestens gleich gut war (Pareto-Vergleich, z. B. mehr Reps beim selben Gewicht oder mehr Gewicht). Frühere Sätze im selben Training zählen mit, L/R getrennt. Nur Gewicht ohne Reps/Zeit zählt nicht, beim allerersten Mal gibt es keinen Pokal. Wird ein Rekord gerade eingetragen, springt der Pokal kurz auf und es gibt einen kleinen Konfetti-Burst (`src/components/PrBadge.tsx`, Portal mit `position: fixed`, damit die Swipe-Zeile nichts abschneidet). Rekorde, die beim Öffnen des Trainings schon da sind, feiern nicht erneut. Bei `prefers-reduced-motion` gibt es kein Konfetti.
+- **Bestleistungen:** Ein 🏆 an der Satznummer (`personalRecords` in `src/sessions.ts`, Pareto-Vergleich über die erfassten Felder).
+  - Kein früheres Training dieser Übung/Stufe darf in allen Feldern mindestens gleich gut gewesen sein, z. B. mehr Reps beim selben Gewicht oder mehr Gewicht.
+  - Im selben Training behält nur der beste Satz den Pokal: Ein späterer, besserer Satz nimmt ihn dem früheren weg. Bei exakt gleichen Werten bekommt ihn der erste Satz. Die Reihenfolge des Eintragens spielt keine Rolle. L/R werden getrennt verglichen.
+  - Nur Gewicht ohne Reps/Zeit zählt nicht. Ohne frühere Daten zur Übung/Stufe gibt es keinen Pokal.
+  - Konfetti und das Aufspringen des Pokals (`src/components/PrBadge.tsx`) gibt es nur für einen neuen, besseren Wert. Die Map `seenPrs` in `ActiveSession` merkt sich pro Zeile, welcher Wert schon gefeiert wurde (oder beim Öffnen schon da war). Neu-Tippen derselben Zahl oder ein Gleichstand (`tie`) feiert nicht. Das Konfetti liegt in einem Portal mit `position: fixed`, damit die Swipe-Zeile nichts abschneidet. Bei `prefers-reduced-motion` gibt es kein Konfetti.
 - **Fortsetzen:** Beim App-Start springt die App in ein laufendes Training der letzten 12 h.
 
 ### Übungen

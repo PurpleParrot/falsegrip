@@ -93,14 +93,25 @@ export function buildHistory(sessions: Session[], exercises: Map<string, Exercis
   return map
 }
 
+export interface PrMark {
+  /** the set's values, e.g. "0|12|0": a changed value may celebrate again */
+  sig: string
+  /** another set in this session has exactly the same values (no celebration) */
+  tie: boolean
+}
+
+const sameVals = (a: Vals, b: Vals, fields: FieldKey[]) => fields.every((f) => num(a[f]) === num(b[f]))
+
 /**
- * Sets of this session that beat everything done before: no earlier set (in history or
- * earlier in this session) was at least as good in every recorded field.
- * Returns keys `${setId}-${side}`. Exercises without history get no marks.
+ * Records of this session. A set gets a mark if
+ * - nothing done before (history) was at least as good in every recorded field,
+ * - no other set of this session is better (a later, better set takes the mark away),
+ * - and, among sets with exactly the same values, it is the first.
+ * Left and right are compared separately. A weight without reps/time is no record yet.
+ * Exercises (or levels) without history get no marks. Keys are `${setId}-${side}`.
  */
-export function personalRecords(session: Session, exercises: Map<string, Exercise>, history: History): Set<string> {
-  const out = new Set<string>()
-  const fronts = new Map<string, Vals[]>()
+export function personalRecords(session: Session, exercises: Map<string, Exercise>, history: History): Map<string, PrMark> {
+  const groups = new Map<string, { fields: FieldKey[]; past: Vals[]; rows: { key: string; v: Vals }[] }>()
   for (const b of session.blocks) {
     const ex = exercises.get(b.exerciseId)
     if (!ex || kindOf(ex) !== 'sets') continue
@@ -110,16 +121,22 @@ export function personalRecords(session: Session, exercises: Map<string, Exercis
     const fields = FIELDS.filter((f) => ex.fields[f])
     for (const set of b.sets)
       for (const [side, v] of Object.entries(set.sides) as [Side, Vals][]) {
-        if (!hasValue(v)) continue
-        // left and right are compared separately within the session
-        const fk = `${key}#${side}`
-        const front = fronts.get(fk) ?? past
-        // a weight alone (reps/time not typed yet) is no record
-        const done = num(v.reps) > 0 || num(v.time) > 0
-        if (done && !front.some((x) => dominates(x, v, fields))) out.add(`${set.id}-${side}`)
-        fronts.set(fk, addToFront(front, v, fields))
+        if (!hasValue(v) || (num(v.reps) <= 0 && num(v.time) <= 0)) continue
+        const gk = `${key}#${side}`
+        let g = groups.get(gk)
+        if (!g) groups.set(gk, (g = { fields, past, rows: [] }))
+        g.rows.push({ key: `${set.id}-${side}`, v })
       }
   }
+  const out = new Map<string, PrMark>()
+  for (const { fields, past, rows } of groups.values())
+    rows.forEach(({ key, v }, i) => {
+      if (past.some((x) => dominates(x, v, fields))) return
+      const others = rows.filter((_, j) => j !== i)
+      if (others.some((o) => dominates(o.v, v, fields) && !sameVals(o.v, v, fields))) return
+      if (rows.slice(0, i).some((o) => sameVals(o.v, v, fields))) return
+      out.set(key, { sig: fields.map((f) => num(v[f])).join('|'), tie: others.some((o) => sameVals(o.v, v, fields)) })
+    })
   return out
 }
 

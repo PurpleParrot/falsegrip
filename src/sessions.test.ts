@@ -37,6 +37,26 @@ describe('personalRecords', () => {
     expect(prsOf([{ weight: 0, reps: 12 }, { weight: 0, reps: 12 }])).toEqual([true, false])
   })
 
+  it('a better set later in the session takes the mark from the earlier one', () => {
+    expect(prsOf([{ weight: 0, reps: 12 }, { weight: 0, reps: 13 }])).toEqual([false, true])
+  })
+
+  it('does not depend on the order the sets were filled in', () => {
+    expect(prsOf([{ weight: 0, reps: 13 }, { weight: 0, reps: 12 }])).toEqual([true, false])
+  })
+
+  it('keeps marks for sets that are better in different ways', () => {
+    expect(prsOf([{ weight: 0, reps: 12 }, { weight: 15, reps: 2 }])).toEqual([true, true])
+  })
+
+  it('flags a tie, so an equal set never celebrates', () => {
+    const cur = session(2 * DAY, [block(pull.id, [set({ weight: 0, reps: 12 }), set({ weight: 0, reps: 12 })])])
+    const prs = personalRecords(cur, map, buildHistory([past, cur], map, cur.startedAt, cur.id))
+    const [a, b] = cur.blocks[0].sets
+    expect(prs.get(`${a.id}-B`)).toEqual({ sig: '0|12', tie: true })
+    expect(prs.has(`${b.id}-B`)).toBe(false)
+  })
+
   it('ignores a weight without reps yet', () => {
     expect(prsOf([{ weight: 20 }])).toEqual([false])
   })

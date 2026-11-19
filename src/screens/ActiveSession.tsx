@@ -54,6 +54,7 @@ import {
   swapBlock,
   updateSession,
   type LastValues,
+  type PrMark,
   findTemplateByName,
   linkBlockWithNext,
   unlinkBlock,
@@ -88,10 +89,10 @@ export function ActiveSession({ id }: { id: string }) {
     () => (session && sessions ? buildHistory(sessions, exMap, session.startedAt, session.id) : new Map()),
     [sessions, exMap, session?.startedAt, session?.id],
   )
-  const prs = useMemo(() => (session ? personalRecords(session, exMap, history) : new Set<string>()), [session, exMap, history])
-  // records already there when the screen opened don't celebrate, only newly entered ones
-  const initialPrs = useRef<Set<string> | null>(null)
-  if (initialPrs.current === null && session && sessions && exLoaded) initialPrs.current = prs
+  const prs = useMemo(() => (session ? personalRecords(session, exMap, history) : new Map<string, PrMark>()), [session, exMap, history])
+  // row -> values already celebrated (or shown when the screen opened): confetti only for a new, better value
+  const seenPrs = useRef<Map<string, string> | null>(null)
+  if (seenPrs.current === null && session && sessions && exLoaded) seenPrs.current = new Map([...prs].map(([k, m]) => [k, m.sig]))
 
   // close an opened swipe row when tapping elsewhere
   useEffect(() => {
@@ -225,7 +226,7 @@ export function ActiveSession({ id }: { id: string }) {
               ex={exMap.get(b.exerciseId)}
               last={last}
               prs={prs}
-              initialPrs={initialPrs.current}
+              seenPrs={seenPrs.current}
               source={settings.suggestionSource}
               openRow={openRow}
               setOpenRow={setOpenRow}
@@ -398,7 +399,7 @@ function ExerciseCard({
   ex,
   last,
   prs,
-  initialPrs,
+  seenPrs,
   source,
   openRow,
   setOpenRow,
@@ -418,8 +419,8 @@ function ExerciseCard({
   onUnlink: () => void
   ex: Exercise | undefined
   last: LastValues
-  prs: Set<string>
-  initialPrs: Set<string> | null
+  prs: Map<string, PrMark>
+  seenPrs: Map<string, string> | null
   source: 'last' | 'targets'
   openRow: string | null
   setOpenRow: (id: string | null) => void
@@ -486,7 +487,7 @@ function ExerciseCard({
                     <div className="set-label">
                       {si === 0 ? <span className={`set-no ${hasValue(v) ? 'done' : ''}`}>{i + 1}</span> : <span className="set-no ghost" />}
                       {side !== 'B' && <span className="side-tag">{side}</span>}
-                      {prs.has(rowId) && <PrBadge celebrate={!!initialPrs && !initialPrs.has(rowId)} />}
+                      {prs.has(rowId) && <PrBadge rowId={rowId} mark={prs.get(rowId)!} seen={seenPrs} />}
                     </div>
                     {fields.map((f) => (
                       <NumInput
