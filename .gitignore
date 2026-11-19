@@ -3,3 +3,14 @@ dist
 .DS_Store
 *.local
 *.tsbuildinfo
+
+# Personal data: backups and exports must never be committed (public repo)
+/BACKUP*/
+/Backup*/
+/backup*/
+falsegrip-backup-*.json
+falsegrip-*.csv
+/*.json
+!/package.json
+!/package-lock.json
+!/tsconfig.json

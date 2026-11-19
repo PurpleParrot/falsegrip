@@ -14,6 +14,7 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
   - Dieser Ablauf ist mit dem Nutzer abgesprochen. Pushen braucht keine Extra-Nachfrage.
 - **Commits:**
   - Git-Identität ist die noreply-Adresse. Private Daten des Nutzers kommen nie in Commits oder externe Dienste.
+  - **Im Projektordner liegen persönliche Backups des Nutzers** (Ordner `BACKUP…/`, Dateien `falsegrip-backup-*.json`). Das Repo ist öffentlich: Diese Dateien dürfen **niemals** committet, hochgeladen oder an externe Dienste geschickt werden. `.gitignore` sperrt sie aus. Vor jedem Commit `git status` prüfen und Dateien gezielt hinzufügen, nicht blind `git add -A`. Für Tests nie das echte Backup verwenden, sondern erfundene Daten.
   - Commit-Nachrichten enden mit `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Ehrlich berichten:** sagen, was getestet wurde und was nicht. Auf einem echten Handy wird meist nicht getestet.
 - **Arbeitsweise:** Der Nutzer iteriert gern in kleinen Schritten, zum Beispiel beim Timer-Sound. Schnell umsetzen und deployen, dann auf Feedback warten.
