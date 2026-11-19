@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { HistoryList } from '../components/HistoryList'
 import {
@@ -21,6 +21,7 @@ import {
   IconUnlink,
 } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
+import { PrBadge } from '../components/PrBadge'
 import { Menu, Sheet } from '../components/Sheet'
 import { StatsView } from '../components/StatsView'
 import { SwipeRow } from '../components/SwipeRow'
@@ -62,7 +63,7 @@ import { displaySeconds, useTimer } from '../timer'
 export function ActiveSession({ id }: { id: string }) {
   const session = useLiveQuery(() => db.sessions.get(id), [id], null)
   const sessions = useSessions()
-  const { map: exMap } = useExercises()
+  const { map: exMap, loaded: exLoaded } = useExercises()
   const settings = useSettings()
   const timer = useTimer()
 
@@ -88,6 +89,9 @@ export function ActiveSession({ id }: { id: string }) {
     [sessions, exMap, session?.startedAt, session?.id],
   )
   const prs = useMemo(() => (session ? personalRecords(session, exMap, history) : new Set<string>()), [session, exMap, history])
+  // records already there when the screen opened don't celebrate, only newly entered ones
+  const initialPrs = useRef<Set<string> | null>(null)
+  if (initialPrs.current === null && session && sessions && exLoaded) initialPrs.current = prs
 
   // close an opened swipe row when tapping elsewhere
   useEffect(() => {
@@ -221,6 +225,7 @@ export function ActiveSession({ id }: { id: string }) {
               ex={exMap.get(b.exerciseId)}
               last={last}
               prs={prs}
+              initialPrs={initialPrs.current}
               source={settings.suggestionSource}
               openRow={openRow}
               setOpenRow={setOpenRow}
@@ -393,6 +398,7 @@ function ExerciseCard({
   ex,
   last,
   prs,
+  initialPrs,
   source,
   openRow,
   setOpenRow,
@@ -413,6 +419,7 @@ function ExerciseCard({
   ex: Exercise | undefined
   last: LastValues
   prs: Set<string>
+  initialPrs: Set<string> | null
   source: 'last' | 'targets'
   openRow: string | null
   setOpenRow: (id: string | null) => void
@@ -479,11 +486,7 @@ function ExerciseCard({
                     <div className="set-label">
                       {si === 0 ? <span className={`set-no ${hasValue(v) ? 'done' : ''}`}>{i + 1}</span> : <span className="set-no ghost" />}
                       {side !== 'B' && <span className="side-tag">{side}</span>}
-                      {prs.has(rowId) && (
-                        <span className="pr-badge" title={t('session.pr')} aria-label={t('session.pr')}>
-                          🏆
-                        </span>
-                      )}
+                      {prs.has(rowId) && <PrBadge celebrate={!!initialPrs && !initialPrs.has(rowId)} />}
                     </div>
                     {fields.map((f) => (
                       <NumInput

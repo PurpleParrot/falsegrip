@@ -840,9 +840,61 @@ h1 {
   pointer-events: none;
   animation: pr-pop 0.35s ease-out;
 }
+.pr-badge.celebrate {
+  animation: pr-cheer 0.7s cubic-bezier(0.3, 1.4, 0.5, 1);
+}
 @keyframes pr-pop {
   from { transform: scale(0.3); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+@keyframes pr-cheer {
+  0% { transform: scale(0.3) rotate(0); opacity: 0; }
+  35% { transform: scale(1.8) rotate(-12deg); opacity: 1; }
+  60% { transform: scale(1.2) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+/* short confetti burst around a new record (fixed layer, see PrBadge) */
+.confetti {
+  position: fixed;
+  width: 0;
+  height: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+.confetti-piece {
+  position: absolute;
+  left: -2px;
+  top: -3.5px;
+  width: 4px;
+  height: 7px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: confetti-fly 0.95s cubic-bezier(0.15, 0.7, 0.4, 1) forwards;
+}
+.confetti-piece.round {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+@keyframes confetti-fly {
+  0% { transform: translate(0, 0) rotate(0) scale(0.6); opacity: 1; }
+  55% { transform: translate(var(--dx), var(--dy)) rotate(calc(var(--rot) * 0.6)) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--dy) + 14px)) rotate(var(--rot)) scale(0.8); opacity: 0; }
+}
+.confetti-ring {
+  position: absolute;
+  left: -14px;
+  top: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  animation: confetti-ring 0.6s ease-out forwards;
+}
+@keyframes confetti-ring {
+  0% { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(1.9); opacity: 0; }
 }
 .set-no {
   width: 30px;
