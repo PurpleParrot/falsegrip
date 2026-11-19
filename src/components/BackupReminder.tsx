@@ -8,8 +8,8 @@ import { Sheet } from './Sheet'
 
 /**
  * Start-up prompts, at most one per app start:
- * 1. username (first start, then every ~2 months while none is set)
- * 2. monthly backup reminder (data lives only in the browser)
+ * 1. monthly backup reminder (data lives only in the browser)
+ * 2. username (first start, then every ~2 months while none is set)
  */
 export function BackupReminder() {
   const [open, setOpen] = useState(false)
@@ -21,8 +21,9 @@ export function BackupReminder() {
     // small delay: let the seed/migration run first
     const id = setTimeout(async () => {
       try {
-        if (await shouldAskUsername()) setAskName(true)
-        else setOpen(await shouldRemindBackup())
+        // backup has priority; the name prompt waits for a start without a due backup
+        if (await shouldRemindBackup()) setOpen(true)
+        else if (await shouldAskUsername()) setAskName(true)
       } catch {
         /* ignore */
       }
