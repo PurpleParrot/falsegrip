@@ -12,6 +12,8 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
   const pad = { l: 36, r: 12, t: 14, b: 22 }
   const all = series.flatMap((s) => s.points)
   const [sel, setSel] = useState<{ k: number; i: number } | null>(null)
+  // mouse hover (desktop): small tooltip right next to the point
+  const [hov, setHov] = useState<{ k: number; i: number } | null>(null)
   const colorOf = (s: Series) => s.color ?? COLORS[s.side]
   const labelled = series.some((s) => s.label)
 
@@ -46,6 +48,8 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
 
   const selS = sel ? series[sel.k] : undefined
   const selected = selS && sel ? selS.points[sel.i] : null
+  const hovS = hov ? series[hov.k] : undefined
+  const hovP = hovS && hov ? hovS.points[hov.i] : null
   const gridYs = [0, 0.5, 1].map((f) => geo.y0 + f * (geo.y1 - geo.y0))
 
   return (
@@ -71,6 +75,7 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           <span>&nbsp;</span>
         )}
       </div>
+      <div className="chart-plot">
       <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" onClick={() => setSel(null)}>
         {gridYs.map((gy, i) => (
           <g key={i}>
@@ -97,9 +102,25 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
                   key={i}
                   cx={geo.x(p.t)}
                   cy={geo.y(p.y)}
-                  r={sel?.k === k && sel.i === i ? 6 : 3.5}
+                  r={(sel?.k === k && sel.i === i) || (hov?.k === k && hov.i === i) ? 6 : 3.5}
                   className="dot"
                   style={{ fill: colorOf(s) }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSel({ k, i })
+                  }}
+                />
+              ))}
+              {/* larger invisible hit area for mouse hover */}
+              {s.points.map((p, i) => (
+                <circle
+                  key={'h' + i}
+                  cx={geo.x(p.t)}
+                  cy={geo.y(p.y)}
+                  r={10}
+                  className="dot-hit"
+                  onPointerEnter={(e) => e.pointerType === 'mouse' && setHov({ k, i })}
+                  onPointerLeave={() => setHov(null)}
                   onClick={(e) => {
                     e.stopPropagation()
                     setSel({ k, i })
@@ -110,6 +131,19 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           )
         })}
       </svg>
+      {hovP && hovS && (
+        <div
+          className={`chart-tip ${geo.x(hovP.t) > W * 0.6 ? 'left' : ''}`}
+          style={{ left: `${(geo.x(hovP.t) / W) * 100}%`, top: `${(geo.y(hovP.y) / H) * 100}%` }}
+        >
+          <strong>
+            {fmtNum(hovP.y, 1)} {unit}
+          </strong>
+          <span className="muted"> · {fmtDateShort(hovP.t)}</span>
+          {hovS.label && <span className="muted"> · {hovS.label}</span>}
+        </div>
+      )}
+      </div>
     </div>
   )
 }

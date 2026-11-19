@@ -1041,6 +1041,29 @@ input.num:focus {
     stroke-dashoffset: 0;
   }
 }
+.chart-plot {
+  position: relative;
+}
+.chart-svg .dot-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.chart-tip {
+  position: absolute;
+  transform: translate(12px, -50%);
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+.chart-tip.left {
+  transform: translate(calc(-100% - 12px), -50%);
+}
 .chart-svg .dot {
   stroke: var(--surface);
   stroke-width: 2;
