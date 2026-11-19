@@ -81,6 +81,8 @@ export interface Block {
 
 export interface Session extends Meta {
   name: string
+  /** username at the time the session was created */
+  user?: string
   templateId?: string | null
   startedAt: number
   endedAt?: number | null
@@ -113,6 +115,8 @@ export interface Settings {
   lastBackupAt?: number | null
   /** 'YYYY-MM' of the last monthly backup reminder */
   backupPromptMonth?: string
+  /** user name / identifier, written into sessions and backups */
+  username?: string
   /** color theme, default 'petrol' */
   theme?: import('./theme').ThemeId
   updatedAt: number

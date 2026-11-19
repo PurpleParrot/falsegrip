@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { IconBack } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
 import { downloadBackup } from '../backup'
-import { importBackup, saveSettings } from '../db'
+import { Sheet } from '../components/Sheet'
+import { parseBackup, saveSettings, type Backup } from '../db'
+import { mergeBackup, overwriteWithBackup, type ImportResult } from '../importBackup'
 import { fmtDate } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
@@ -13,6 +15,8 @@ export function Settings() {
   const s = useSettings()
   const fileRef = useRef<HTMLInputElement>(null)
   const [msg, setMsg] = useState('')
+  const [pending, setPending] = useState<Backup | null>(null)
+  const [busy, setBusy] = useState(false)
   const [shareMsg, setShareMsg] = useState('')
   const [persisted, setPersisted] = useState<boolean | null>(null)
 
@@ -78,6 +82,23 @@ export function Settings() {
           <strong>kg</strong>
         </div>
 
+        <label>
+          <span>{t('settings.username')}</span>
+          <input
+            className="text"
+            defaultValue={s.username ?? ''}
+            key={s.username ?? ''}
+            placeholder={t('settings.usernamePlaceholder')}
+            autoCapitalize="none"
+            autoCorrect="off"
+            onBlur={(e) => {
+              const v = e.target.value.trim()
+              if (v !== (s.username ?? '')) void saveSettings({ username: v || undefined })
+            }}
+          />
+          <small className="muted">{t('settings.usernameHint')}</small>
+        </label>
+
         <div className="field">
           <span>{t('settings.backup')}</span>
           <p className="muted small">{t('settings.backupHint')}</p>
@@ -100,9 +121,9 @@ export function Settings() {
               const f = e.target.files?.[0]
               e.target.value = ''
               if (!f) return
+              setMsg('')
               try {
-                const n = await importBackup(JSON.parse(await f.text()))
-                setMsg(t('settings.imported', { n }))
+                setPending(parseBackup(await f.text()))
               } catch {
                 setMsg(t('settings.importError'))
               }
@@ -110,6 +131,64 @@ export function Settings() {
           />
           {msg && <p className="accent small">{msg}</p>}
         </div>
+
+        <Sheet open={!!pending} onClose={() => !busy && setPending(null)} title={t('import.title')}>
+          {pending && (
+            <div className="form">
+              <p className="muted small">
+                {t('import.info', {
+                  date: fmtDate(pending.exportedAt),
+                  n: (pending.sessions ?? []).filter((x) => !x.deletedAt).length,
+                })}
+                {pending.user ? ' ' + t('import.from', { user: pending.user }) : ''}
+              </p>
+              {pending.user && s.username && pending.user.trim().toLowerCase() !== s.username.trim().toLowerCase() && (
+                <p className="warn small">{t('import.otherUser', { user: pending.user, me: s.username })}</p>
+              )}
+              <p>{t('import.question')}</p>
+              <button
+                className="btn primary block"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true)
+                  try {
+                    const r: ImportResult = await mergeBackup(pending)
+                    setMsg(t('import.merged', { added: r.added, updated: r.updated, skipped: r.skipped }))
+                  } catch {
+                    setMsg(t('settings.importError'))
+                  }
+                  setBusy(false)
+                  setPending(null)
+                }}
+              >
+                {t('import.merge')}
+              </button>
+              <p className="muted small">{t('import.mergeHint')}</p>
+              <button
+                className="btn danger-outline block"
+                disabled={busy}
+                onClick={async () => {
+                  if (!confirm(t('import.overwriteConfirm'))) return
+                  setBusy(true)
+                  try {
+                    const r = await overwriteWithBackup(pending)
+                    setMsg(t('import.overwritten', { n: r.added }))
+                  } catch {
+                    setMsg(t('settings.importError'))
+                  }
+                  setBusy(false)
+                  setPending(null)
+                }}
+              >
+                {t('import.overwrite')}
+              </button>
+              <p className="muted small">{t('import.overwriteHint')}</p>
+              <button className="btn ghost block" disabled={busy} onClick={() => setPending(null)}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          )}
+        </Sheet>
 
         <div className="field">
           <span>{t('settings.storage')}</span>

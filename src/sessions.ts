@@ -89,8 +89,10 @@ export async function startSession(template: Template | null, exercises: Map<str
     if (!groupIds.has(g)) groupIds.set(g, uid())
     return groupIds.get(g)!
   }
+  const user = (await getSettings()).username || undefined
   const session: Session = {
     id: uid(),
+    user,
     createdAt: t,
     updatedAt: t,
     deletedAt: null,

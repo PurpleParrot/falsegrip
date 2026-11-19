@@ -220,6 +220,8 @@ export interface Backup {
   app: 'falsegrip'
   version: 1
   exportedAt: number
+  /** username of whoever exported it */
+  user?: string
   exercises: Exercise[]
   templates: Template[]
   sessions: Session[]
@@ -227,32 +229,22 @@ export interface Backup {
 }
 
 export async function exportBackup(): Promise<Backup> {
+  const user = (await getSettings()).username || undefined
   return {
     app: 'falsegrip',
     version: 1,
     exportedAt: now(),
+    user,
     exercises: await db.exercises.toArray(),
     templates: await db.templates.toArray(),
-    sessions: await db.sessions.toArray(),
+    // stamp the user into every session that doesn't carry one yet
+    sessions: (await db.sessions.toArray()).map((x) => (x.user || !user ? x : { ...x, user })),
     settings: await db.settings.toArray(),
   }
 }
 
-/** Merge a backup: per record, the newer updatedAt wins. Nothing is lost. */
-export async function importBackup(b: Backup): Promise<number> {
+export function parseBackup(text: string): Backup {
+  const b = JSON.parse(text) as Backup
   if (b?.app !== 'falsegrip') throw new Error('invalid')
-  let count = 0
-  await db.transaction('rw', [db.exercises, db.templates, db.sessions, db.settings], async () => {
-    for (const name of ['exercises', 'templates', 'sessions', 'settings'] as const) {
-      const table = db.table(name)
-      for (const rec of (b[name] ?? []) as { id: string; updatedAt: number }[]) {
-        const cur = (await table.get(rec.id)) as { updatedAt: number } | undefined
-        if (!cur || (rec.updatedAt ?? 0) > (cur.updatedAt ?? 0)) {
-          await table.put(rec)
-          count++
-        }
-      }
-    }
-  })
-  return count
+  return b
 }
