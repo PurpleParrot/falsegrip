@@ -825,9 +825,24 @@ h1 {
   border-top: 1px solid var(--line);
 }
 .set-label {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 4px;
+}
+/* personal record: small trophy on the set number */
+.pr-badge {
+  position: absolute;
+  left: 19px;
+  top: -6px;
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: none;
+  animation: pr-pop 0.35s ease-out;
+}
+@keyframes pr-pop {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 .set-no {
   width: 30px;

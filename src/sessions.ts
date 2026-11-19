@@ -58,6 +58,71 @@ export function suggestionFor(
   return last.get(exKey(block.exerciseId, block.levelId))?.[index]?.[side]
 }
 
+// ---------- Personal records ----------
+
+/** key -> all earlier filled values (only the ones not beaten by another, see `dominates`) */
+export type History = Map<string, Vals[]>
+
+const FIELDS: FieldKey[] = ['weight', 'reps', 'time']
+const num = (x?: number | null) => x ?? 0
+
+/** a is at least as good as b in every field */
+function dominates(a: Vals, b: Vals, fields: FieldKey[]): boolean {
+  return fields.every((f) => num(a[f]) >= num(b[f]))
+}
+
+function addToFront(front: Vals[], v: Vals, fields: FieldKey[]): Vals[] {
+  if (front.some((x) => dominates(x, v, fields))) return front
+  return [...front.filter((x) => !dominates(v, x, fields)), v]
+}
+
+export function buildHistory(sessions: Session[], exercises: Map<string, Exercise>, before: number, excludeId?: string): History {
+  const map: History = new Map()
+  for (const s of sessions) {
+    if (s.deletedAt || s.id === excludeId || s.startedAt >= before) continue
+    for (const b of s.blocks) {
+      const ex = exercises.get(b.exerciseId)
+      if (!ex || kindOf(ex) !== 'sets') continue
+      const fields = FIELDS.filter((f) => ex.fields[f])
+      const key = exKey(b.exerciseId, b.levelId)
+      let front = map.get(key) ?? []
+      for (const set of b.sets) for (const v of Object.values(set.sides)) if (hasValue(v)) front = addToFront(front, v!, fields)
+      map.set(key, front)
+    }
+  }
+  return map
+}
+
+/**
+ * Sets of this session that beat everything done before: no earlier set (in history or
+ * earlier in this session) was at least as good in every recorded field.
+ * Returns keys `${setId}-${side}`. Exercises without history get no marks.
+ */
+export function personalRecords(session: Session, exercises: Map<string, Exercise>, history: History): Set<string> {
+  const out = new Set<string>()
+  const fronts = new Map<string, Vals[]>()
+  for (const b of session.blocks) {
+    const ex = exercises.get(b.exerciseId)
+    if (!ex || kindOf(ex) !== 'sets') continue
+    const key = exKey(b.exerciseId, b.levelId)
+    const past = history.get(key)
+    if (!past?.length) continue
+    const fields = FIELDS.filter((f) => ex.fields[f])
+    for (const set of b.sets)
+      for (const [side, v] of Object.entries(set.sides) as [Side, Vals][]) {
+        if (!hasValue(v)) continue
+        // left and right are compared separately within the session
+        const fk = `${key}#${side}`
+        const front = fronts.get(fk) ?? past
+        // a weight alone (reps/time not typed yet) is no record
+        const done = num(v.reps) > 0 || num(v.time) > 0
+        if (done && !front.some((x) => dominates(x, v, fields))) out.add(`${set.id}-${side}`)
+        fronts.set(fk, addToFront(front, v, fields))
+      }
+  }
+  return out
+}
+
 // ---------- Mutations ----------
 
 const emptySet = (ex?: Pick<Exercise, 'unilateral'>): WorkSet => ({
@@ -266,7 +331,6 @@ export async function addOption(sessionId: string, blockId: string, ex: Exercise
   })
 }
 
-/** Creates a template from a session: same exercises/levels, set count = sets used. */
 /** Save the session's exercises as a template. With `overwrite`, that template's exercises are replaced. */
 export async function saveAsTemplate(session: Session, name: string, overwrite?: Template): Promise<string> {
   const t = now()
@@ -309,4 +373,15 @@ export async function finishSession(id: string): Promise<boolean> {
 
 export async function deleteSession(id: string) {
   await softDelete('sessions', id)
+}
+
+const RESUME_WINDOW = 12 * 3600000
+
+/** A session that is still running and was started within the last 12 hours (to reopen on app start). */
+export async function findRunningSession(): Promise<Session | undefined> {
+  return db.sessions
+    .where('startedAt')
+    .above(now() - RESUME_WINDOW)
+    .filter((x) => !x.deletedAt && !x.endedAt)
+    .last()
 }

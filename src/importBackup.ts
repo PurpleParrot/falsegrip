@@ -1,4 +1,4 @@
-import { db, ensureSeeded, type Backup } from './db'
+import { alive, db, ensureSeeded, exportBackup, type Backup, type Snapshot } from './db'
 import { now, type Block, type Exercise, type Level, type Session, type Settings, type Template } from './model'
 
 export interface ImportResult {
@@ -8,11 +8,20 @@ export interface ImportResult {
 }
 
 const norm = (s: string) => s.trim().toLowerCase()
-const alive = <T extends { deletedAt?: number | null }>(x: T) => !x.deletedAt
 
-/** Replace everything on this device with the backup. */
+/** The safety copy taken before the last overwrite, if any. */
+export async function getSnapshot(): Promise<Snapshot | undefined> {
+  return db.snapshots.get('pre-import')
+}
+
+/**
+ * Replace everything on this device with the backup.
+ * The current data is kept as a snapshot first, so the overwrite can be undone.
+ */
 export async function overwriteWithBackup(b: Backup): Promise<ImportResult> {
-  await db.transaction('rw', [db.exercises, db.templates, db.sessions, db.settings], async () => {
+  const before = await exportBackup()
+  await db.transaction('rw', [db.exercises, db.templates, db.sessions, db.settings, db.snapshots], async () => {
+    await db.snapshots.put({ id: 'pre-import', createdAt: now(), backup: before })
     await Promise.all([db.exercises.clear(), db.templates.clear(), db.sessions.clear()])
     await db.exercises.bulkPut(b.exercises ?? [])
     await db.templates.bulkPut(b.templates ?? [])
@@ -28,6 +37,14 @@ export async function overwriteWithBackup(b: Backup): Promise<ImportResult> {
     updated: 0,
     skipped: 0,
   }
+}
+
+/** Undo the last overwrite: swap the snapshot back in (the replaced data becomes the new snapshot). */
+export async function restoreSnapshot(): Promise<boolean> {
+  const snap = await getSnapshot()
+  if (!snap) return false
+  await overwriteWithBackup(snap.backup)
+  return true
 }
 
 /**

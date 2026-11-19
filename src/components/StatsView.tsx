@@ -73,7 +73,9 @@ export function StatsView({
           ))}
         </div>
       )}
-      {(def.id === 'volume' || def.id === 'timeVolume') && <VolumeHint ex={ex} missingBw={!bodyweight} />}
+      {(def.id === 'volume' || def.id === 'timeVolume' || (def.id === 'e1rm' && bwPctOf(ex) > 0)) && (
+        <VolumeHint ex={ex} missingBw={!bodyweight} />
+      )}
       <div className="segmented small">
         {RANGES.map((r) => (
           <button key={r} className={r === range ? 'on' : ''} onClick={() => setRange(r)}>

@@ -9,7 +9,7 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 
 - **UI-Sprache ist Deutsch, Übungsnamen sind Englisch.** Alle UI-Texte liegen zentral in `src/i18n.ts`.
 - **Mit dem Nutzer auf Deutsch sprechen.**
-- **Ablauf:** Code ändern, im Browser-Pane testen (`localhost:5173`, mobile Viewport), committen, auf `main` pushen. GitHub Actions deployt dann auf Pages.
+- **Ablauf:** Code ändern, `npm test` laufen lassen, im Browser-Pane testen (`localhost:5173`, mobile Viewport), committen, auf `main` pushen. GitHub Actions deployt dann auf Pages.
   - Den Deploy mit `gh run watch <id>` abwarten.
   - Dieser Ablauf ist mit dem Nutzer abgesprochen. Pushen braucht keine Extra-Nachfrage.
 - **Commits:**
@@ -17,16 +17,22 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
   - Commit-Nachrichten enden mit `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Ehrlich berichten:** sagen, was getestet wurde und was nicht. Auf einem echten Handy wird meist nicht getestet.
 - **Arbeitsweise:** Der Nutzer iteriert gern in kleinen Schritten, zum Beispiel beim Timer-Sound. Schnell umsetzen und deployen, dann auf Feedback warten.
+- **Diese Datei pflegen:** Nach jeder neuen Funktion „Stand der Funktionen“ (und ggf. „Wichtige Dateien“) aktualisieren und mitcommitten.
 
 ## Technik
 
 - **Stack:** Vite 8, React 19, TypeScript, Dexie 4 (IndexedDB, `useLiveQuery`), vite-plugin-pwa (generateSW, autoUpdate).
 - **Dev-Server:** `npx vite --port 5173 --strictPort`.
-- **Prüfen:** `npx tsc -b` für den Typcheck, `npm run build` für den Build.
+- **Prüfen:** `npx tsc -b` für den Typcheck, `npm test` für die Tests, `npm run build` für den Build.
+- **Tests:** Vitest (`vitest.config.ts`, getrennt von `vite.config.ts`), Dateien `src/*.test.ts`, Helfer in `src/test/`. IndexedDB kommt in Tests von `fake-indexeddb`. Abgedeckt: Superset-Helfer, Volumen/e1RM/Totals/CSV, letzte Werte, Bestleistungen, `parseBackup`, `mergeBackup`, Überschreiben/Wiederherstellen. Der Deploy-Workflow führt `npm test` vor dem Build aus: rote Tests verhindern den Deploy.
+- **Testdaten im Browser:** Im Dev-Server lassen sich Module direkt laden, z. B. `const { db } = await import('/src/db.ts')` im `javascript_tool`, um Trainings anzulegen.
 - **Icons:**
   - Quelle ist `assets/icon-source.png`.
   - `npm run icons` erzeugt die Icons mit dem `@vite-pwa/assets-generator` und verschiebt sie nach `public/`.
-- **Router:** Hash-Router mit Overlay-Stack in `src/router.ts`. `bootRouter` startet immer bei `#/`.
+- **Router:** Hash-Router mit Overlay-Stack in `src/router.ts`.
+  - `bootRouter` startet bei `#/`. Danach öffnet `main.tsx` ein laufendes Training der letzten 12 h (`findRunningSession`), z. B. nach einem PWA-Update-Reload.
+  - Jedes offene Sheet hat einen eigenen History-Eintrag. Wer nach dem Schließen eines Sheets navigiert oder ein weiteres öffnet, muss kurz warten, bis dieser Eintrag weg ist (`Menu` macht das mit `setTimeout(…, 30)`). `navigate`/`goBack` puffern Aufrufe, solange `ignorePop > 0` ist.
+- **DB-Schema:** Dexie-Version 2 (Tabelle `snapshots` für die Sicherung vor dem Überschreiben). Neue Tabellen oder Indizes brauchen eine neue `this.version(n)`.
 - **Datensätze:** Jeder Datensatz hat `id`, `createdAt`, `updatedAt` und `deletedAt` (Soft Delete), als Vorbereitung für den Sync.
 - **Seed-Migrationen:**
   - `SEED_VERSION` in `src/db.ts` steht aktuell auf 7.
@@ -41,10 +47,10 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 | Datei | Inhalt |
 |---|---|
 | `src/model.ts` | Typen; `FIELD_ORDER` (Weight, Time, Reps: Reps immer rechts); `bwPctOf`; Superset-Helfer (`groupSupersets`, `linkWithNext`, `unlink`, `splitAfter`, `normalizeSupersets`) |
-| `src/db.ts` | DB, Starter-Bibliothek, `STRETCH_OPTIONS`, Migrationen, `exportBackup`/`parseBackup` |
-| `src/importBackup.ts` | `mergeBackup` (Abgleich nach Inhalt) und `overwriteWithBackup` |
+| `src/db.ts` | DB, Starter-Bibliothek, `STRETCH_OPTIONS`, Migrationen, `exportBackup`/`parseBackup` (prüft die Struktur) |
+| `src/importBackup.ts` | `mergeBackup` (Abgleich nach Inhalt), `overwriteWithBackup` (legt vorher einen Snapshot an), `restoreSnapshot` |
 | `src/backup.ts` | `downloadBackup`, monatliche Erinnerung `shouldRemindBackup`, `shouldAskUsername` (alle ~60 Tage, solange kein Name gesetzt ist) |
-| `src/sessions.ts` | Trainingslogik, `startSession` (setzt `user`), `saveAsTemplate(overwrite?)`, `findTemplateByName` |
+| `src/sessions.ts` | Trainingslogik, `startSession` (setzt `user`), `saveAsTemplate(overwrite?)`, `findTemplateByName`, Bestleistungen (`buildHistory`, `personalRecords`), `findRunningSession` |
 | `src/stats.ts` | Metriken, `buildSeries`, `sessionTotals` (Nebenmuskelgruppen zählen halb), `buildCsv` (erste Spalte `user`), `fileUser` |
 | `src/timer.ts` | Globaler Timer; Klaviersynthese per Web Audio (`pianoNote`), siehe unten |
 | `src/components/LineChart.tsx` | SVG-Chart: Tippen zeigt den Wert oben, Maus-Hover zeigt einen Tooltip neben dem Punkt |
@@ -58,6 +64,8 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - **Start- und Endzeit:** Ein Tippen auf den Trainingsnamen klappt Start/Ende (zwei Zeiteingaben) und die Notiz auf bzw. zu.
 - **Löschen:** Beim Entfernen einer Übung fragt die App nach, im Training und in der Vorlage.
 - **Vorlagen:** Gibt es schon eine Vorlage mit demselben Namen, fragt die App „Überschreiben“ oder „Als neue Vorlage speichern“.
+- **Bestleistungen:** Ein 🏆 an der Satznummer, wenn kein früherer Satz derselben Übung/Stufe in allen erfassten Feldern mindestens gleich gut war (Pareto-Vergleich, z. B. mehr Reps beim selben Gewicht oder mehr Gewicht). Frühere Sätze im selben Training zählen mit, L/R getrennt. Nur Gewicht ohne Reps/Zeit zählt nicht, beim allerersten Mal gibt es keinen Pokal.
+- **Fortsetzen:** Beim App-Start springt die App in ein laufendes Training der letzten 12 h.
 
 ### Übungen
 - **Körpergewicht-Anteil:** `bwPct` lässt sich im Übungseditor einstellen.
@@ -69,6 +77,8 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 
 ### Statistik
 - **Volumen** gibt es pro Übung. Die Formel ist (KG × bwPct + Zusatzgewicht) × Reps. Bei reinen Halteübungen wird mit Sekunden statt Reps gerechnet (kg·s).
+- **e1RM** (Epley) rechnet mit der Gesamtlast KG × bwPct + Zusatzgewicht, bei Gym-Übungen (bwPct 0) also nur mit dem Hantelgewicht. „Max. Gewicht“ bleibt das eingetragene Gewicht.
+- Ohne eingetragenes Körpergewicht zeigen Volumen und Gesamt einen Hinweis.
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
 - **CSV-Export:** Spalte `user`, der Benutzername steht auch im Dateinamen.
@@ -89,6 +99,8 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - **Backup:**
   - Export als JSON, Dateiname mit Benutzername.
   - Beim Import fragt die App „Kombinieren“ oder „Überschreiben“. Gehört das Backup einem anderen Nutzer, erscheint eine Warnung.
+  - Die Datei wird beim Import auf ihre Struktur geprüft.
+  - Vor „Überschreiben“ sichert die App den bisherigen Stand in der Tabelle `snapshots`. In den Einstellungen erscheint dann „Früheren Stand wiederherstellen“. Wiederherstellen tauscht die beiden Stände, ist also selbst rückgängig zu machen.
   - Beim Kombinieren werden Übungen über den Namen abgeglichen (Stufen ebenfalls über den Namen, IDs werden umgemappt). Trainings gelten als gleich bei gleichem Namen und Startzeit ±2 min, Vorlagen bei identischem Inhalt.
 - **Backup-Erinnerung:** monatlich beim ersten App-Start des Monats. Dazu ein Hinweis ganz unten.
 - **Teilen:** Der Button „App teilen“ kopiert den Link zur App.

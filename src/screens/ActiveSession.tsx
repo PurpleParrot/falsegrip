@@ -34,7 +34,9 @@ import {
   addBlock,
   addSet,
   applyVals,
+  buildHistory,
   buildLastValues,
+  personalRecords,
   deleteSession,
   deleteSet,
   finishSession,
@@ -81,6 +83,11 @@ export function ActiveSession({ id }: { id: string }) {
     () => (session && sessions ? buildLastValues(sessions, session.startedAt, session.id) : new Map()),
     [sessions, session?.startedAt, session?.id],
   ) as LastValues
+  const history = useMemo(
+    () => (session && sessions ? buildHistory(sessions, exMap, session.startedAt, session.id) : new Map()),
+    [sessions, exMap, session?.startedAt, session?.id],
+  )
+  const prs = useMemo(() => (session ? personalRecords(session, exMap, history) : new Set<string>()), [session, exMap, history])
 
   // close an opened swipe row when tapping elsewhere
   useEffect(() => {
@@ -213,6 +220,7 @@ export function ActiveSession({ id }: { id: string }) {
               onUnlink={() => unlinkBlock(session.id, b.id)}
               ex={exMap.get(b.exerciseId)}
               last={last}
+              prs={prs}
               source={settings.suggestionSource}
               openRow={openRow}
               setOpenRow={setOpenRow}
@@ -384,6 +392,7 @@ function ExerciseCard({
   block,
   ex,
   last,
+  prs,
   source,
   openRow,
   setOpenRow,
@@ -403,6 +412,7 @@ function ExerciseCard({
   onUnlink: () => void
   ex: Exercise | undefined
   last: LastValues
+  prs: Set<string>
   source: 'last' | 'targets'
   openRow: string | null
   setOpenRow: (id: string | null) => void
@@ -469,6 +479,11 @@ function ExerciseCard({
                     <div className="set-label">
                       {si === 0 ? <span className={`set-no ${hasValue(v) ? 'done' : ''}`}>{i + 1}</span> : <span className="set-no ghost" />}
                       {side !== 'B' && <span className="side-tag">{side}</span>}
+                      {prs.has(rowId) && (
+                        <span className="pr-badge" title={t('session.pr')} aria-label={t('session.pr')}>
+                          🏆
+                        </span>
+                      )}
                     </div>
                     {fields.map((f) => (
                       <NumInput

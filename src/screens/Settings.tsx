@@ -1,11 +1,12 @@
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useRef, useState } from 'react'
 import { IconBack } from '../components/Icons'
 import { NumInput } from '../components/NumInput'
 import { downloadBackup } from '../backup'
 import { Sheet } from '../components/Sheet'
-import { parseBackup, saveSettings, type Backup } from '../db'
-import { mergeBackup, overwriteWithBackup, type ImportResult } from '../importBackup'
-import { fmtDate } from '../format'
+import { db, parseBackup, saveSettings, type Backup } from '../db'
+import { mergeBackup, overwriteWithBackup, restoreSnapshot, type ImportResult } from '../importBackup'
+import { fmtDate, fmtTime } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import { goBack } from '../router'
@@ -19,6 +20,7 @@ export function Settings() {
   const [busy, setBusy] = useState(false)
   const [shareMsg, setShareMsg] = useState('')
   const [persisted, setPersisted] = useState<boolean | null>(null)
+  const snapshot = useLiveQuery(() => db.snapshots.get('pre-import'), [])
 
   useEffect(() => {
     navigator.storage?.persisted?.().then(setPersisted).catch(() => setPersisted(null))
@@ -129,6 +131,28 @@ export function Settings() {
               }
             }}
           />
+          {snapshot && (
+            <>
+              <button
+                className="btn block"
+                disabled={busy}
+                onClick={async () => {
+                  if (!confirm(t('settings.restoreConfirm', { date: `${fmtDate(snapshot.createdAt)}, ${fmtTime(snapshot.createdAt)}` }))) return
+                  setBusy(true)
+                  try {
+                    await restoreSnapshot()
+                    setMsg(t('settings.restored'))
+                  } catch {
+                    setMsg(t('settings.importError'))
+                  }
+                  setBusy(false)
+                }}
+              >
+                {t('settings.restore')}
+              </button>
+              <p className="muted small">{t('settings.restoreHint', { date: `${fmtDate(snapshot.createdAt)}, ${fmtTime(snapshot.createdAt)}` })}</p>
+            </>
+          )}
           {msg && <p className="accent small">{msg}</p>}
         </div>
 

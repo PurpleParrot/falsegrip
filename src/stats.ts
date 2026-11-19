@@ -85,8 +85,13 @@ function compute(ex: Exercise, m: MetricId, entries: Entry[], atWeight?: number 
       const amount = m === 'volume' ? r : tm
       return Math.round(sum(entries.map((e) => (e.bw * share + w(e.v)) * amount(e.v))))
     }
-    case 'e1rm':
-      return maxOf(vs.filter((v) => r(v) > 0).map((v) => Math.round(w(v) * (1 + (r(v) - 1) / 30) * 10) / 10))
+    case 'e1rm': {
+      // Epley on the total load: body weight × share + added weight (gym exercises: share 0)
+      const share = bwPctOf(ex) / 100
+      return maxOf(
+        entries.filter((e) => r(e.v) > 0).map((e) => Math.round((e.bw * share + w(e.v)) * (1 + (r(e.v) - 1) / 30) * 10) / 10),
+      )
+    }
     case 'repsAtWeight': {
       const xs = vs.filter((v) => w(v) === (atWeight ?? 0)).map(r)
       return xs.length ? Math.max(...xs) : null

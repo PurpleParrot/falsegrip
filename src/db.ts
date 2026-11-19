@@ -18,6 +18,7 @@ class FalsegripDB extends Dexie {
   templates!: Table<Template, string>
   sessions!: Table<Session, string>
   settings!: Table<Settings, string>
+  snapshots!: Table<Snapshot, string>
 
   constructor() {
     super('falsegrip')
@@ -27,6 +28,8 @@ class FalsegripDB extends Dexie {
       sessions: 'id, startedAt, updatedAt',
       settings: 'id',
     })
+    // v2: safety copy of the data before an "overwrite" import
+    this.version(2).stores({ snapshots: 'id' })
   }
 }
 
@@ -243,8 +246,28 @@ export async function exportBackup(): Promise<Backup> {
   }
 }
 
+/** Data as it was before the last "overwrite" import, to undo it. */
+export interface Snapshot {
+  id: 'pre-import'
+  createdAt: number
+  backup: Backup
+}
+
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null
+const isStr = (x: unknown) => typeof x === 'string' && x.length > 0
+const listOk = (x: unknown, item: (o: Record<string, unknown>) => boolean) =>
+  x === undefined || (Array.isArray(x) && x.every((o) => isObj(o) && item(o)))
+
+/** Parse and sanity-check a backup file. Throws on anything that doesn't look like a Falsegrip backup. */
 export function parseBackup(text: string): Backup {
-  const b = JSON.parse(text) as Backup
-  if (b?.app !== 'falsegrip') throw new Error('invalid')
-  return b
+  const b: unknown = JSON.parse(text)
+  if (!isObj(b) || b.app !== 'falsegrip') throw new Error('invalid')
+  const ok =
+    listOk(b.exercises, (e) => isStr(e.id) && typeof e.name === 'string' && isObj(e.fields) && Array.isArray(e.levels)) &&
+    listOk(b.templates, (x) => isStr(x.id) && typeof x.name === 'string' && Array.isArray(x.items)) &&
+    listOk(b.sessions, (x) => isStr(x.id) && typeof x.startedAt === 'number' && Array.isArray(x.blocks)) &&
+    listOk(b.settings, (x) => isStr(x.id)) &&
+    [b.exercises, b.templates, b.sessions].some(Array.isArray)
+  if (!ok) throw new Error('invalid')
+  return b as unknown as Backup
 }
