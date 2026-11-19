@@ -1,14 +1,25 @@
 import { db, exportBackup, getSettings, saveSettings } from './db'
 import { now } from './model'
-import { downloadFile } from './stats'
+import { downloadFile, fileUser } from './stats'
 
 export const monthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 
 /** Export all data as a JSON file and remember when. */
 export async function downloadBackup() {
   const b = await exportBackup()
-  downloadFile(`falsegrip-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(b), 'application/json')
+  downloadFile(`falsegrip-backup-${fileUser(b.user)}${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(b), 'application/json')
   await saveSettings({ lastBackupAt: now() })
+}
+
+const USERNAME_PROMPT_EVERY = 60 * 86400000 // about every two months
+
+/** Ask for a username on first start, then every ~2 months while none is set. Marks the prompt. */
+export async function shouldAskUsername(): Promise<boolean> {
+  const s = await getSettings()
+  if (s.username?.trim()) return false
+  if (s.usernamePromptAt && Date.now() - s.usernamePromptAt < USERNAME_PROMPT_EVERY) return false
+  await saveSettings({ usernamePromptAt: now() })
+  return true
 }
 
 /**

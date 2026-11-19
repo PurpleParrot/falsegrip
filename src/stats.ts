@@ -218,9 +218,14 @@ export function sessionTotals(sessions: Session[], exercises: Map<string, Exerci
 
 // ---------- CSV export (spec 6.5) ----------
 
-export function buildCsv(sessions: Session[], exercises: Map<string, Exercise>, templates: Map<string, string>): string {
+export function buildCsv(
+  sessions: Session[],
+  exercises: Map<string, Exercise>,
+  templates: Map<string, string>,
+  username = '',
+): string {
   const head = [
-    'date', 'start_time', 'session_id', 'session_name', 'template', 'exercise', 'progression_level',
+    'user', 'date', 'start_time', 'session_id', 'session_name', 'template', 'exercise', 'progression_level',
     'intensity_pct', 'side', 'set_no', 'weight_kg', 'reps', 'time_s', 'bodyweight_kg', 'note',
   ]
   const esc = (x: unknown) => {
@@ -234,13 +239,14 @@ export function buildCsv(sessions: Session[], exercises: Map<string, Exercise>, 
     const d = new Date(s.startedAt)
     const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
     const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`
+    const user = username || s.user || ''
     for (const b of s.blocks) {
       const ex = exercises.get(b.exerciseId)
       const lvl = ex?.levels.find((l) => l.id === b.levelId)
       const extra = b.text?.trim() || (b.checked?.length ? b.checked.join('; ') : '')
       if (extra) {
         rows.push(
-          [date, time, s.id, s.name, s.templateId ? templates.get(s.templateId) ?? '' : '', ex?.name ?? '', '', '', '', '', '', '', '', '', extra]
+          [user, date, time, s.id, s.name, s.templateId ? templates.get(s.templateId) ?? '' : '', ex?.name ?? '', '', '', '', '', '', '', '', '', extra]
             .map(esc)
             .join(','),
         )
@@ -250,7 +256,7 @@ export function buildCsv(sessions: Session[], exercises: Map<string, Exercise>, 
           if (!hasValue(v)) continue
           rows.push(
             [
-              date, time, s.id, s.name, s.templateId ? templates.get(s.templateId) ?? '' : '', ex?.name ?? '',
+              user, date, time, s.id, s.name, s.templateId ? templates.get(s.templateId) ?? '' : '', ex?.name ?? '',
               lvl?.name ?? '', lvl?.intensity ?? '', side === 'B' ? '' : side, i + 1, v.weight ?? '', v.reps ?? '',
               v.time ?? '', set.bodyweight ?? '', set.note ?? '',
             ].map(esc).join(','),
@@ -260,6 +266,17 @@ export function buildCsv(sessions: Session[], exercises: Map<string, Exercise>, 
     }
   }
   return rows.join('\n')
+}
+
+/** filename-safe version of the username, '' if none */
+export function fileUser(name?: string): string {
+  const slug = (name ?? '')
+    .trim()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug ? slug + '-' : ''
 }
 
 export function downloadFile(name: string, content: string, type: string) {

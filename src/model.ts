@@ -117,6 +117,8 @@ export interface Settings {
   backupPromptMonth?: string
   /** user name / identifier, written into sessions and backups */
   username?: string
+  /** last time the app asked for a username */
+  usernamePromptAt?: number
   /** color theme, default 'petrol' */
   theme?: import('./theme').ThemeId
   updatedAt: number

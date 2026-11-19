@@ -1,26 +1,68 @@
 import { useEffect, useState } from 'react'
-import { downloadBackup, shouldRemindBackup } from '../backup'
+import { downloadBackup, shouldAskUsername, shouldRemindBackup } from '../backup'
+import { saveSettings } from '../db'
 import { fmtDate } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import { Sheet } from './Sheet'
 
-/** Shown once per month on app start: data lives only in the browser, so export a backup. */
+/**
+ * Start-up prompts, at most one per app start:
+ * 1. username (first start, then every ~2 months while none is set)
+ * 2. monthly backup reminder (data lives only in the browser)
+ */
 export function BackupReminder() {
   const [open, setOpen] = useState(false)
+  const [askName, setAskName] = useState(false)
+  const [name, setName] = useState('')
   const { lastBackupAt } = useSettings()
 
   useEffect(() => {
     // small delay: let the seed/migration run first
-    const id = setTimeout(() => {
-      shouldRemindBackup()
-        .then(setOpen)
-        .catch(() => {})
+    const id = setTimeout(async () => {
+      try {
+        if (await shouldAskUsername()) setAskName(true)
+        else setOpen(await shouldRemindBackup())
+      } catch {
+        /* ignore */
+      }
     }, 800)
     return () => clearTimeout(id)
   }, [])
 
+  const saveName = async () => {
+    const v = name.trim()
+    if (v) await saveSettings({ username: v })
+    setAskName(false)
+  }
+
   return (
+    <>
+    <Sheet open={askName} onClose={() => setAskName(false)} title={t('usernamePrompt.title')}>
+      <form
+        className="form"
+        onSubmit={(e) => {
+          e.preventDefault()
+          void saveName()
+        }}
+      >
+        <p>{t('usernamePrompt.text')}</p>
+        <input
+          className="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t('settings.usernamePlaceholder')}
+          autoCapitalize="none"
+          autoCorrect="off"
+        />
+        <button type="submit" className="btn primary block" disabled={!name.trim()}>
+          {t('usernamePrompt.save')}
+        </button>
+        <button type="button" className="btn block" onClick={() => setAskName(false)}>
+          {t('backupReminder.later')}
+        </button>
+      </form>
+    </Sheet>
     <Sheet open={open} onClose={() => setOpen(false)} title={t('backupReminder.title')}>
       <div className="form">
         <p>{t('backupReminder.text')}</p>
@@ -41,5 +83,6 @@ export function BackupReminder() {
         </button>
       </div>
     </Sheet>
+    </>
   )
 }

@@ -4,10 +4,10 @@ import { ExercisePicker } from '../components/ExercisePicker'
 import { IconChevron } from '../components/Icons'
 import { StatsView } from '../components/StatsView'
 import { TotalsView } from '../components/TotalsView'
-import { useExercises, useSessions, useTemplates } from '../hooks'
+import { useExercises, useSessions, useSettings, useTemplates } from '../hooks'
 import { t } from '../i18n'
 import type { Exercise } from '../model'
-import { buildCsv, downloadFile, metricsFor } from '../stats'
+import { buildCsv, downloadFile, fileUser, metricsFor } from '../stats'
 
 const KEY = 'falsegrip.stats.sel'
 const KEY_CMP = 'falsegrip.stats.compare'
@@ -34,6 +34,7 @@ export function Stats() {
   const { map, list } = useExercises()
   const sessions = useSessions()
   const templates = useTemplates()
+  const settings = useSettings()
   const [pickerOpen, setPickerOpen] = useState(false)
   // kept while the sheet animates closed, so the title doesn't flip
   const [pickerMode, setPickerMode] = useState<'main' | 'compare'>('main')
@@ -90,8 +91,8 @@ export function Stats() {
   const exportCsv = () => {
     if (!sessions) return
     const tplNames = new Map((templates ?? []).map((x) => [x.id, x.name]))
-    const csv = buildCsv(sessions, map, tplNames)
-    downloadFile(`falsegrip-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv;charset=utf-8')
+    const csv = buildCsv(sessions, map, tplNames, settings.username ?? '')
+    downloadFile(`falsegrip-${fileUser(settings.username)}${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv;charset=utf-8')
   }
 
   return (
