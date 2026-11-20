@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fmtDate, fmtNum, fmtVals, exerciseName } from '../format'
+import { fmtDate, fmtDateShort, fmtNum, fmtVals, exerciseName } from '../format'
 import { t } from '../i18n'
 import { bwPctOf, hasValue, type Exercise, type Session } from '../model'
-import { buildSeries, metricsFor, rangeStart, weightsUsed, type MetricId } from '../stats'
+import { buildSeries, metricsFor, rangeStart, trainingFrequency, weightsUsed, type MetricId } from '../stats'
 import { useSettings } from '../hooks'
 import { LineChart } from './LineChart'
 
@@ -84,6 +84,7 @@ export function StatsView({
         ))}
       </div>
       <LineChart series={series} unit={def.unit} height={compact ? 170 : 220} />
+      <FrequencyLine sessions={sessions} ex={ex} levelId={levelId} />
       <div className="kpis">
         <div>
           <span className="muted small">{t('stats.best')}</span>
@@ -120,6 +121,18 @@ export function StatsView({
         </div>
       )}
     </div>
+  )
+}
+
+/** "Ø x pro Woche · Ø y pro Monat" over the last 365 days (or since the first training). */
+export function FrequencyLine({ sessions, ex, levelId }: { sessions: Session[]; ex?: Exercise; levelId?: string | null }) {
+  const f = useMemo(() => trainingFrequency(sessions, Date.now(), ex, levelId), [sessions, ex, levelId])
+  if (!f) return null
+  return (
+    <p className="muted small freq-line">
+      {t('stats.freq', { week: fmtNum(f.perWeek, 1), month: fmtNum(f.perMonth, 1) })} ·{' '}
+      {f.partial ? t('stats.freqSince', { date: fmtDateShort(f.since) }) : t('stats.freqYear')}
+    </p>
   )
 }
 

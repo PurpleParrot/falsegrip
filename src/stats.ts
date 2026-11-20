@@ -186,6 +186,52 @@ export function rangeStart(range: '1m' | '3m' | '1y' | 'all'): number {
   return d.getTime()
 }
 
+// ---------- Training frequency ----------
+
+const DAY = 86_400_000
+
+export interface Frequency {
+  perWeek: number
+  perMonth: number
+  /** start of the window: 365 days ago, or the first matching training if that is later */
+  since: number
+  /** true when the window is shorter than 365 days (first training less than a year ago) */
+  partial: boolean
+}
+
+/**
+ * Average trainings per week / month over the last 365 days. If the first training is more recent,
+ * the window starts there (at least 7 days), so a new user isn't averaged over empty months.
+ * `ex` given: only trainings with recorded sets of that exercise (and level, if a string).
+ */
+export function trainingFrequency(
+  sessions: Session[],
+  now = Date.now(),
+  ex?: Exercise,
+  levelId?: string | null,
+): Frequency | null {
+  const from = now - 365 * DAY
+  // a training counts once something was recorded (sets, or text / checked options); empty ones don't
+  const recorded = (b: Session['blocks'][number]) =>
+    b.sets.some((st) => Object.values(st.sides).some(hasValue)) || !!b.text?.trim() || !!b.checked?.length
+  const relevant = sessions.filter(
+    (s) =>
+      !s.deletedAt &&
+      s.startedAt <= now &&
+      s.blocks.some((b) => recorded(b) && (!ex || (b.exerciseId === ex.id && (!levelId || b.levelId === levelId)))),
+  )
+  const n = relevant.filter((s) => s.startedAt >= from).length
+  if (!n) return null
+  const since = Math.max(from, Math.min(...relevant.map((s) => s.startedAt)))
+  const days = Math.max(7, (now - since) / DAY)
+  return {
+    perWeek: n / (days / 7),
+    perMonth: n / (days / (365 / 12)),
+    since,
+    partial: since > from,
+  }
+}
+
 // ---------- Totals across all exercises ----------
 
 export interface SessionTotal {

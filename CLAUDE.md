@@ -86,6 +86,10 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - Ohne eingetragenes Körpergewicht zeigen Volumen und Gesamt einen Hinweis.
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
+- **Trainingshäufigkeit** (`trainingFrequency` in `src/stats.ts`, Zeile `FrequencyLine` unter dem Chart): „Ø x pro Woche · Ø y pro Monat“.
+  - Gilt immer für die letzten 365 Tage, unabhängig vom gewählten Zeitraum. Liegt das erste passende Training später, wird ab diesem Training gerechnet („seit 25. Sept.“), mindestens aber über 7 Tage.
+  - In „Gesamt“ zählen alle Trainings mit Inhalt, in der Übungsansicht nur Trainings mit Sätzen dieser Übung bzw. Stufe. Leere Trainings zählen nicht.
+  - Die Gesamtzahl steht bewusst nicht in der Zeile, weil es dafür schon den Kasten „Trainings“ gibt (Wunsch des Nutzers).
 - **CSV-Export:** Spalte `user`, der Benutzername steht auch im Dateinamen.
 
 ### Timer

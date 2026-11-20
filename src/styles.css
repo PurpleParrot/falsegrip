@@ -1485,3 +1485,8 @@ input.num:focus {
 .kpis.three strong {
   font-size: 19px;
 }
+
+.freq-line {
+  margin: -4px 0 0;
+  text-align: center;
+}

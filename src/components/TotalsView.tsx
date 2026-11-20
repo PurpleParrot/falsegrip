@@ -6,6 +6,7 @@ import { MUSCLE_GROUPS, type Exercise, type MuscleGroup, type Session } from '..
 import { rangeStart, sessionTotals, type Series } from '../stats'
 import { COMPARE_COLORS } from './CompareView'
 import { LineChart } from './LineChart'
+import { FrequencyLine } from './StatsView'
 
 type Range = '1m' | '3m' | '1y' | 'all'
 const RANGES: Range[] = ['1m', '3m', '1y', 'all']
@@ -82,6 +83,7 @@ export function TotalsView({ sessions, exercises }: { sessions: Session[]; exerc
         ))}
       </div>
       <LineChart series={series} unit="kg" height={240} />
+      <FrequencyLine sessions={sessions} />
       {mode === 'session' ? (
         <div className="kpis three">
           <div>
