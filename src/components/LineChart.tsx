@@ -1,16 +1,46 @@
 import { useMemo, useState } from 'react'
-import { fmtDateShort, fmtNum } from '../format'
+import { fmtDateShort, fmtMonth, fmtNum } from '../format'
 import { t } from '../i18n'
-import { trendPct, type Series } from '../stats'
+import { bucketPoints, regression, REGRESSION_MIN, trendPct, type Bucket, type Point, type Series } from '../stats'
 
 const COLORS: Record<string, string> = { B: 'var(--accent)', L: 'var(--accent)', R: 'var(--accent-2)' }
 
-/** Simple, gently animated SVG line chart. Tap to inspect a point. */
-export function LineChart({ series, unit, height = 200 }: { series: Series[]; unit: string; height?: number }) {
+/**
+ * Simple, gently animated SVG line chart. Tap to inspect a point.
+ * `bucket`: draw one point per week / month (mean). Trend and regression line always use the individual trainings.
+ */
+export function LineChart({
+  series: raw,
+  unit,
+  height = 200,
+  bucket,
+}: {
+  series: Series[]
+  unit: string
+  height?: number
+  bucket?: Bucket
+}) {
   const W = 340
   const H = height
-  const pad = { l: 36, r: 12, t: 14, b: 22 }
-  const all = series.flatMap((s) => s.points)
+  const series = useMemo(
+    () => (bucket ? raw.map((s) => ({ ...s, points: bucketPoints(s.points, bucket) })) : raw),
+    [raw, bucket],
+  )
+  // dashed regression line per series from REGRESSION_MIN trainings on, over the individual trainings
+  const regs = raw.map((s) => {
+    const r = s.points.length >= REGRESSION_MIN ? regression(s.points) : null
+    if (!r) return null
+    const t0 = s.points[0].t
+    const t1 = s.points[s.points.length - 1].t
+    return { t0, t1, y0: r.a + r.b * t0, y1: r.a + r.b * t1 }
+  })
+  const all: Point[] = [
+    ...series.flatMap((s) => s.points),
+    ...regs.flatMap((r) => (r ? [{ t: r.t0, y: r.y0, sessionId: '' }, { t: r.t1, y: r.y1, sessionId: '' }] : [])),
+  ]
+  // left padding wide enough for the longest axis label (e.g. "10.953")
+  const maxY = all.length ? Math.max(...all.map((p) => p.y)) * 1.15 : 0
+  const pad = { l: Math.max(30, fmtNum(maxY, 0).length * 6 + 10), r: 12, t: 14, b: 22 }
   const [sel, setSel] = useState<{ k: number; i: number } | null>(null)
   // mouse hover (desktop): small tooltip right next to the point
   const [hov, setHov] = useState<{ k: number; i: number } | null>(null)
@@ -51,6 +81,11 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
   const hovS = hov ? series[hov.k] : undefined
   const hovP = hovS && hov ? hovS.points[hov.i] : null
   const gridYs = [0, 0.5, 1].map((f) => geo.y0 + f * (geo.y1 - geo.y0))
+  // date of a point; weekly/monthly means: "Woche ab 3. Nov." / "November 2026" and how many trainings
+  const when = (p: Point) =>
+    p.from === undefined
+      ? fmtDateShort(p.t)
+      : `${bucket === 'month' ? fmtMonth(p.from) : t('stats.weekOf', { date: fmtDateShort(p.from) })} · ${(p.count ?? 1) === 1 ? t('stats.oneTraining') : t('stats.nTrainings', { n: p.count ?? 1 })}`
 
   // Trend "▲ +12 %": one line → badge in the top-right corner; several lines → small box at the end of each line
   const BOX_H = 16
@@ -76,8 +111,8 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
     return n
   }
   const trends = series
-    .map((s) => {
-      const r = trendPct(s.points)
+    .map((s, k) => {
+      const r = trendPct(raw[k].points)
       const last = s.points.at(-1)
       if (r === null || !last) return null
       const x = Math.min(geo.x(last.t), W - 6)
@@ -121,9 +156,10 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
         {selected ? (
           <>
             <strong>
+              {selected.from !== undefined && 'Ø '}
               {fmtNum(selected.y, 1)} {unit}
             </strong>
-            <span className="muted"> · {fmtDateShort(selected.t)}</span>
+            <span className="muted"> · {when(selected)}</span>
             {series.length > 1 && (
               <span className="muted"> · {selS!.label ?? (selS!.side === 'L' ? t('stats.left') : t('stats.right'))}</span>
             )}
@@ -160,6 +196,19 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
         <text x={W - pad.r} y={H - 4} className="axis" textAnchor="end">
           {fmtDateShort(geo.t1)}
         </text>
+        {regs.map((r, k) =>
+          r ? (
+            <line
+              key={'reg' + k}
+              x1={geo.x(r.t0)}
+              y1={geo.y(r.y0)}
+              x2={geo.x(r.t1)}
+              y2={geo.y(r.y1)}
+              className="reg-line"
+              style={{ stroke: colorOf(raw[k]) }}
+            />
+          ) : null,
+        )}
         {series.map((s, k) => {
           if (!s.points.length) return null
           const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${geo.x(p.t).toFixed(1)},${geo.y(p.y).toFixed(1)}`).join(' ')
@@ -221,9 +270,10 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           style={{ left: `${(geo.x(hovP.t) / W) * 100}%`, top: `${(geo.y(hovP.y) / H) * 100}%` }}
         >
           <strong>
+            {hovP.from !== undefined && 'Ø '}
             {fmtNum(hovP.y, 1)} {unit}
           </strong>
-          <span className="muted"> · {fmtDateShort(hovP.t)}</span>
+          <span className="muted"> · {when(hovP)}</span>
           {hovS.label && <span className="muted"> · {hovS.label}</span>}
         </div>
       )}

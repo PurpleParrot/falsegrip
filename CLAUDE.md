@@ -86,7 +86,12 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - Ohne eingetragenes Körpergewicht zeigen Volumen und Gesamt einen Hinweis.
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
-- **Trend** (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): „▲ +25 %“ = Veränderung vom ersten zum letzten Punkt im gewählten Zeitraum. Steigerung grün (`--up`), Rückgang rot (`--down`); beide Tokens gibt es für dunkle Themes und für Weiß & Blau.
+- **Glättung im Chart** (`bucketPoints`, `bucketFor` in `src/stats.ts`, Prop `bucket` von `LineChart`): Bei 1 M und 3 M ein Punkt pro Woche (ab Montag), bei 1 J und Alles einer pro Monat, jeweils der Mittelwert. Antippen zeigt „Ø … · Woche ab 3. Nov. · 3 Trainings“. Die Kästen „Bestwert“, „Trainings“ usw. rechnen weiter mit den einzelnen Trainings.
+- **Trend** (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): „▲ +25 %“ = Veränderung im gewählten Zeitraum, berechnet aus den einzelnen Trainings, nicht aus den Wochen-/Monatsmitteln.
+  - Ab 10 Trainings (`REGRESSION_MIN`): Regressionsgerade, Wert am letzten gegenüber dem ersten Training. Die Gerade wird dezent gestrichelt eingezeichnet (`.reg-line`).
+  - Darunter: Ø letztes Drittel gegenüber Ø erstem Drittel (bei 2–5 Trainings also letzter gegenüber erstem Wert).
+  - Steigerung grün (`--up`), Rückgang rot (`--down`); beide Tokens gibt es für dunkle Themes und für Weiß & Blau.
+  - Bekannte Schwäche: Startet der Wert nahe 0 (z. B. Zusatzgewicht bei Dips), werden die Prozente riesig (+950 %).
   - **Eine sichtbare Linie:** Badge oben rechts in der Chart-Karte (`.trend.corner`, 13 px). Das gilt auch im Vergleich, wenn die anderen Übungen im Zeitraum keine Daten haben.
   - **Mehrere Linien** (L/R, Vergleich mehrerer Übungen – vom Nutzer viel genutzt –, Muskelgruppen): kleiner Kasten am letzten Punkt jeder Linie (`.trend.at-point`), Rahmen in der Linienfarbe, mit der Linienfarbe zu 22 % gefüllt.
   - Platzierung: Kandidaten direkt über/unter dem Punkt und eine Kastenhöhe weiter weg. Gewählt wird der, durch den am wenigsten Linie läuft (`crossings`), bei Gleichstand die Seite, von der die eigene Linie nicht kommt. Danach werden überlappende Kästen auseinandergeschoben.
@@ -95,6 +100,9 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
   - Gilt immer für die letzten 365 Tage, unabhängig vom gewählten Zeitraum. Liegt das erste passende Training später, wird ab diesem Training gerechnet („seit 25. Sept.“), mindestens aber über 7 Tage.
   - In „Gesamt“ zählen alle Trainings mit Inhalt, in der Übungsansicht nur Trainings mit Sätzen dieser Übung bzw. Stufe. Leere Trainings zählen nicht.
   - Die Gesamtzahl steht bewusst nicht in der Zeile, weil es dafür schon den Kasten „Trainings“ gibt (Wunsch des Nutzers).
+- **Erklärseite** „Wie sich die Statistiken berechnen“ (Button ganz unten im Statistik-Tab, Route `#/stats/help`, `src/screens/StatsHelp.tsx`): kurz gehalten (Wunsch des Nutzers): Last, Volume, 1RM, die nicht selbsterklärenden Kennzahlen inkl. Stufen, Wochen-/Monatspunkte, Trend, Häufigkeit, Gesamt.
+  - Die Texte liegen in `src/i18n.ts` (`help.<abschnitt>.t` / `.b`) mit Mini-Markup: Leerzeile = Absatz, „• “ = Listenpunkt, „» “ = Formelkasten.
+  - **Wer eine Berechnung ändert, passt den Text dort mit an.**
 - **CSV-Export:** Spalte `user`, der Benutzername steht auch im Dateinamen.
 
 ### Timer

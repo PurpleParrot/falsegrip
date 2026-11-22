@@ -3,7 +3,7 @@ import { exerciseName, fmtNum } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import type { Exercise, Session } from '../model'
-import { buildSeries, metricsFor, rangeStart, type MetricDef, type MetricId, type Series } from '../stats'
+import { bucketFor, buildSeries, metricsFor, rangeStart, type MetricDef, type MetricId, type Series } from '../stats'
 import { LineChart } from './LineChart'
 
 export const COMPARE_COLORS = ['var(--accent)', 'var(--accent-2)', '#e9d39a', '#b9a3e3', '#8fd18f']
@@ -71,7 +71,7 @@ export function CompareView({ items, sessions }: { items: CompareItem[]; session
           </button>
         ))}
       </div>
-      <LineChart series={series} unit={def.unit} height={240} />
+      <LineChart series={series} unit={def.unit} height={240} bucket={bucketFor(range)} />
       <div className="compare-legend">
         {series.map((s) => {
           const best = s.points.length ? Math.max(...s.points.map((p) => p.y)) : null

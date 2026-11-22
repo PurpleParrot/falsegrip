@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fmtDate, fmtDateShort, fmtNum, fmtVals, exerciseName } from '../format'
 import { t } from '../i18n'
 import { bwPctOf, hasValue, type Exercise, type Session } from '../model'
-import { buildSeries, metricsFor, rangeStart, trainingFrequency, weightsUsed, type MetricId } from '../stats'
+import { bucketFor, buildSeries, metricsFor, rangeStart, trainingFrequency, weightsUsed, type MetricId } from '../stats'
 import { useSettings } from '../hooks'
 import { LineChart } from './LineChart'
 
@@ -83,7 +83,7 @@ export function StatsView({
           </button>
         ))}
       </div>
-      <LineChart series={series} unit={def.unit} height={compact ? 170 : 220} />
+      <LineChart series={series} unit={def.unit} height={compact ? 170 : 220} bucket={bucketFor(range)} />
       <FrequencyLine sessions={sessions} ex={ex} levelId={levelId} />
       <div className="kpis">
         <div>

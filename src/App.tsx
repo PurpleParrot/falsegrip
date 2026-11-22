@@ -11,6 +11,7 @@ import { ExerciseEdit } from './screens/ExerciseEdit'
 import { Library } from './screens/Library'
 import { Settings } from './screens/Settings'
 import { Stats } from './screens/Stats'
+import { StatsHelp } from './screens/StatsHelp'
 import { TemplateEdit } from './screens/TemplateEdit'
 import { Timer } from './screens/Timer'
 import { Trainings } from './screens/Trainings'
@@ -47,6 +48,10 @@ export function App() {
       screen = <Library segment={second === 'templates' ? 'templates' : 'exercises'} />
       break
     case 'stats':
+      if (second === 'help') {
+        screen = <StatsHelp />
+        break
+      }
       tab = 'stats'
       screen = <Stats />
       break

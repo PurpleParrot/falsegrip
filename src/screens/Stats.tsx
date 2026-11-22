@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { COMPARE_COLORS, COMPARE_MAX, CompareView, itemLabel, sharedMetrics, type CompareItem } from '../components/CompareView'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { IconChevron } from '../components/Icons'
+import { navigate } from '../router'
 import { StatsView } from '../components/StatsView'
 import { TotalsView } from '../components/TotalsView'
 import { useExercises, useSessions, useSettings, useTemplates } from '../hooks'
@@ -138,6 +139,9 @@ export function Stats() {
         {main && sessions && comparing && <CompareView items={items} sessions={sessions} />}
         </>
         )}
+        <button className="btn ghost help-link" onClick={() => navigate('/stats/help')}>
+          ⓘ {t('help.button')}
+        </button>
       </div>
       <ExercisePicker
         open={pickerOpen}

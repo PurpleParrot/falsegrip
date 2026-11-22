@@ -1542,3 +1542,57 @@ input.num:focus {
   margin: -4px 0 0;
   text-align: center;
 }
+
+/* regression (trend) line behind the data, from 10 trainings on */
+.reg-line {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+  opacity: 0.5;
+  fill: none;
+}
+
+/* ---------- Stats help page ---------- */
+.help-link {
+  display: block;
+  width: 100%;
+  margin: 28px 0 8px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.help-page {
+  padding-bottom: 32px;
+}
+.help-section {
+  margin-top: 12px;
+  padding: 14px 14px 6px;
+}
+.help-section h2 {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+.help-section p,
+.help-section li {
+  margin: 0 0 8px;
+  line-height: 1.5;
+  color: var(--text);
+}
+.help-section ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+.help-section li {
+  margin-bottom: 4px;
+}
+.formula {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border-left: 3px solid var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 14px;
+}
+.formula div + div {
+  margin-top: 4px;
+}

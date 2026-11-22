@@ -3,7 +3,7 @@ import { fmtNum } from '../format'
 import { useSettings } from '../hooks'
 import { t } from '../i18n'
 import { MUSCLE_GROUPS, type Exercise, type MuscleGroup, type Session } from '../model'
-import { rangeStart, sessionTotals, type Series } from '../stats'
+import { bucketFor, rangeStart, sessionTotals, type Series } from '../stats'
 import { COMPARE_COLORS } from './CompareView'
 import { LineChart } from './LineChart'
 import { FrequencyLine } from './StatsView'
@@ -82,7 +82,7 @@ export function TotalsView({ sessions, exercises }: { sessions: Session[]; exerc
           </button>
         ))}
       </div>
-      <LineChart series={series} unit="kg" height={240} />
+      <LineChart series={series} unit="kg" height={240} bucket={bucketFor(range)} />
       <FrequencyLine sessions={sessions} />
       {mode === 'session' ? (
         <div className="kpis three">

@@ -113,6 +113,9 @@ export interface Point {
   t: number
   y: number
   sessionId: string
+  /** weekly/monthly mean: start of the week/month and number of trainings in it */
+  from?: number
+  count?: number
 }
 export interface Series {
   side: Side
@@ -188,13 +191,85 @@ export function rangeStart(range: '1m' | '3m' | '1y' | 'all'): number {
 
 // ---------- Trend ----------
 
-/** Change from the first to the last point of a series in %, null if not computable (< 2 points, start ≤ 0). */
+/** Least-squares line y = a + b·t through the points (t in ms). */
+export function regression(points: Point[]): { a: number; b: number } | null {
+  const n = points.length
+  if (n < 2) return null
+  const mt = points.reduce((s, p) => s + p.t, 0) / n
+  const my = points.reduce((s, p) => s + p.y, 0) / n
+  let num = 0
+  let den = 0
+  for (const p of points) {
+    num += (p.t - mt) * (p.y - my)
+    den += (p.t - mt) ** 2
+  }
+  if (den === 0) return null
+  const b = num / den
+  return { a: my - b * mt, b }
+}
+
+/** Trainings from which on the trend uses a regression line instead of averages. */
+export const REGRESSION_MIN = 10
+
+/**
+ * Change over the range in %, from the individual trainings (not the weekly/monthly means):
+ * ≥ 10 points → regression line, value at the last vs. the first training;
+ * fewer → mean of the last third vs. mean of the first third (2 points: last vs. first).
+ * null if not computable (< 2 points, start ≤ 0).
+ */
 export function trendPct(points: Point[]): number | null {
-  if (points.length < 2) return null
-  const first = points[0].y
-  const last = points[points.length - 1].y
-  if (!(first > 0)) return null
-  return ((last - first) / first) * 100
+  const n = points.length
+  if (n < 2) return null
+  let start: number
+  let end: number
+  const reg = n >= REGRESSION_MIN ? regression(points) : null
+  if (reg) {
+    start = reg.a + reg.b * points[0].t
+    end = reg.a + reg.b * points[n - 1].t
+  } else {
+    const k = Math.max(1, Math.floor(n / 3))
+    const mean = (ps: Point[]) => ps.reduce((s, p) => s + p.y, 0) / ps.length
+    start = mean(points.slice(0, k))
+    end = mean(points.slice(n - k))
+  }
+  if (!(start > 0)) return null
+  return ((end - start) / start) * 100
+}
+
+// ---------- Weekly / monthly means for the chart ----------
+
+export type Bucket = 'week' | 'month'
+
+/** 1 M / 3 M → one point per week, 1 J / Alles → one per month. */
+export const bucketFor = (range: '1m' | '3m' | '1y' | 'all'): Bucket => (range === '1m' || range === '3m' ? 'week' : 'month')
+
+/** Start of the week (Monday 0:00) or month containing t, local time. */
+export function bucketStart(t: number, bucket: Bucket): number {
+  const d = new Date(t)
+  d.setHours(0, 0, 0, 0)
+  if (bucket === 'month') d.setDate(1)
+  else d.setDate(d.getDate() - ((d.getDay() + 6) % 7))
+  return d.getTime()
+}
+
+/** Mean value per week / month; the point sits at the mean time of its trainings, `from` = bucket start. */
+export function bucketPoints(points: Point[], bucket: Bucket): Point[] {
+  const groups = new Map<number, Point[]>()
+  for (const p of points) {
+    const k = bucketStart(p.t, bucket)
+    const g = groups.get(k)
+    if (g) g.push(p)
+    else groups.set(k, [p])
+  }
+  return [...groups.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([from, g]) => ({
+      t: g.reduce((s, p) => s + p.t, 0) / g.length,
+      y: Math.round((g.reduce((s, p) => s + p.y, 0) / g.length) * 10) / 10,
+      sessionId: g[g.length - 1].sessionId,
+      from,
+      count: g.length,
+    }))
 }
 
 // ---------- Training frequency ----------
