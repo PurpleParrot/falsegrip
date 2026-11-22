@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { fmtDateShort, fmtNum } from '../format'
 import { t } from '../i18n'
-import type { Series } from '../stats'
+import { trendPct, type Series } from '../stats'
 
 const COLORS: Record<string, string> = { B: 'var(--accent)', L: 'var(--accent)', R: 'var(--accent-2)' }
 
@@ -55,6 +55,7 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
   return (
     <div className="chart">
       <div className="chart-readout">
+        <div className="chart-readout-main">
         {selected ? (
           <>
             <strong>
@@ -73,6 +74,29 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           </span>
         ) : (
           <span>&nbsp;</span>
+        )}
+        </div>
+        {!labelled && (
+          <div className="trends">
+            {series.map((s) => {
+              const p = trendPct(s.points)
+              if (p === null) return null
+              const r = Math.round(p)
+              const dir = r > 0 ? 'up' : r < 0 ? 'down' : 'flat'
+              return (
+                <span
+                  key={s.side}
+                  className={`trend ${dir}`}
+                  title={t('stats.trendHint')}
+                  aria-label={`${t('stats.trendHint')}: ${r > 0 ? '+' : ''}${r} %`}
+                >
+                  {series.length > 1 && <i style={{ background: colorOf(s) }} />}
+                  {dir === 'up' ? '▲' : dir === 'down' ? '▼' : '▶'} {r > 0 ? '+' : ''}
+                  {fmtNum(r, 0)} %
+                </span>
+              )
+            })}
+          </div>
         )}
       </div>
       <div className="chart-plot">

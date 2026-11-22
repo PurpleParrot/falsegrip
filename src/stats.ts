@@ -186,6 +186,17 @@ export function rangeStart(range: '1m' | '3m' | '1y' | 'all'): number {
   return d.getTime()
 }
 
+// ---------- Trend ----------
+
+/** Change from the first to the last point of a series in %, null if not computable (< 2 points, start ≤ 0). */
+export function trendPct(points: Point[]): number | null {
+  if (points.length < 2) return null
+  const first = points[0].y
+  const last = points[points.length - 1].y
+  if (!(first > 0)) return null
+  return ((last - first) / first) * 100
+}
+
 // ---------- Training frequency ----------
 
 const DAY = 86_400_000

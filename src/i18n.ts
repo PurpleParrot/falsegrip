@@ -151,6 +151,7 @@ const de = {
   'stats.last': 'Zuletzt',
   'stats.sessions': 'Trainings',
   'stats.atWeight': 'bei',
+  'stats.trendHint': 'Veränderung im gewählten Zeitraum (erster zu letztem Wert)',
   'stats.freq': 'Ø {week} pro Woche · Ø {month} pro Monat',
   'stats.freqYear': 'letzte 365 Tage',
   'stats.freqSince': 'seit {date}',
