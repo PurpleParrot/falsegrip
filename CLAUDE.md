@@ -87,7 +87,7 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
 - **Trend** (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): „▲ +25 %“ = Veränderung vom ersten zum letzten Punkt im gewählten Zeitraum. Steigerung grün (`--up`), Rückgang rot (`--down`); beide Tokens gibt es für dunkle Themes und für Weiß & Blau.
-  - **Eine Linie:** kleines Badge oben rechts in der Chart-Karte (`.trend.corner`).
+  - **Eine sichtbare Linie:** Badge oben rechts in der Chart-Karte (`.trend.corner`, 13 px). Das gilt auch im Vergleich, wenn die anderen Übungen im Zeitraum keine Daten haben.
   - **Mehrere Linien** (L/R, Vergleich mehrerer Übungen – vom Nutzer viel genutzt –, Muskelgruppen): kleiner Kasten am letzten Punkt jeder Linie (`.trend.at-point`), Rahmen in der Linienfarbe, mit der Linienfarbe zu 22 % gefüllt.
   - Platzierung: Kandidaten direkt über/unter dem Punkt und eine Kastenhöhe weiter weg. Gewählt wird der, durch den am wenigsten Linie läuft (`crossings`), bei Gleichstand die Seite, von der die eigene Linie nicht kommt. Danach werden überlappende Kästen auseinandergeschoben.
   - Keine Anzeige bei weniger als 2 Punkten oder Startwert 0.

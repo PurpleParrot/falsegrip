@@ -111,7 +111,8 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
     </>
   )
   const trendCls = (r: number) => `trend ${r > 0 ? 'up' : r < 0 ? 'down' : ''}`
-  const single = series.length === 1 ? trends[0] : undefined
+  // "one line" = one visible line (a compared exercise without data in range doesn't count)
+  const single = series.filter((s) => s.points.length).length === 1 ? trends[0] : undefined
 
   return (
     <div className="chart">

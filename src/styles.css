@@ -1100,7 +1100,9 @@ input.num:focus {
 /* one line: in the top-right corner of the chart card */
 .trend.corner {
   flex-shrink: 0;
-  padding: 3px 7px;
+  font-size: 13px;
+  gap: 4px;
+  padding: 4px 9px;
   border-radius: 999px;
   background: var(--surface-2);
 }
