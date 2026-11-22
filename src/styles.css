@@ -13,6 +13,9 @@
   --petrol: #1d4552;
   --petrol-line: #3a7486;
   --danger: #ef4f5a;
+  /* trend arrows: green = better, red = worse */
+  --up: #4cc38a;
+  --down: #ef5a63;
   --radius: 14px;
   --tabbar-h: 64px;
   --safe-b: env(safe-area-inset-bottom, 0px);
@@ -67,6 +70,8 @@
   --petrol: #e3e7ff;
   --petrol-line: #4a5df9;
   --danger: #e02f3c;
+  --up: #1a8f55;
+  --down: #d62d3a;
   color-scheme: light;
 }
 
@@ -1075,37 +1080,43 @@ input.num:focus {
 .chart-readout-main {
   min-width: 0;
 }
-.trends {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  flex-shrink: 0;
-}
 .trend {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
+  gap: 3px;
+  font-size: 11px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  padding: 1px 7px;
+  line-height: 1;
+  color: var(--muted);
+}
+.trend.up {
+  color: var(--up);
+}
+.trend.down {
+  color: var(--down);
+}
+/* one line: in the top-right corner of the chart card */
+.trend.corner {
+  flex-shrink: 0;
+  padding: 3px 7px;
   border-radius: 999px;
   background: var(--surface-2);
 }
-.trend.up {
-  color: var(--accent);
-}
-.trend.down,
-.trend.flat {
-  color: var(--muted);
-}
-.trend i {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
+/* several lines: small box at the end of each line, border in the line colour */
+.trend.at-point {
+  position: absolute;
+  padding: 2px 4px;
+  border-radius: 6px;
+  border: 1px solid var(--line-color, var(--line));
+  /* tinted with the line colour so it is clear which line the number belongs to */
+  background: color-mix(in srgb, var(--line-color, var(--line)) 22%, var(--surface));
+  font-size: 10px;
+  height: 16px;
+  box-sizing: border-box;
+  pointer-events: none;
+  transform: translateX(calc(-100% + 6px));
 }
 .legend {
   display: inline-flex;

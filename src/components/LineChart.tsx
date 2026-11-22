@@ -52,6 +52,67 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
   const hovP = hovS && hov ? hovS.points[hov.i] : null
   const gridYs = [0, 0.5, 1].map((f) => geo.y0 + f * (geo.y1 - geo.y0))
 
+  // Trend "▲ +12 %": one line → badge in the top-right corner; several lines → small box at the end of each line
+  const BOX_H = 16
+  const BOX_W = 62
+  const GAP = 7
+  // how much line runs through a box spanning [x0, x1] × [top, top + BOX_H]: lines sampled every 2 units (+3 margin)
+  const crossings = (x0: number, x1: number, top: number) => {
+    let n = 0
+    for (const s of series)
+      for (let i = 1; i < s.points.length; i++) {
+        const ax = geo.x(s.points[i - 1].t), bx = geo.x(s.points[i].t)
+        const ay = geo.y(s.points[i - 1].y), by = geo.y(s.points[i].y)
+        const lo = Math.max(x0, ax), hi = Math.min(x1, bx)
+        if (lo > hi || bx === ax) continue
+        // sample along the segment's length so steep pieces count as much as flat ones
+        const len = Math.hypot(bx - ax, by - ay)
+        for (let d = 0; d <= len; d += 2) {
+          const xx = ax + ((bx - ax) * d) / len
+          const yy = ay + ((by - ay) * d) / len
+          if (xx >= lo && xx <= hi && yy >= top - 3 && yy <= top + BOX_H + 3) n++
+        }
+      }
+    return n
+  }
+  const trends = series
+    .map((s) => {
+      const r = trendPct(s.points)
+      const last = s.points.at(-1)
+      if (r === null || !last) return null
+      const x = Math.min(geo.x(last.t), W - 6)
+      const py = geo.y(last.y)
+      // candidates: right above / below the point, then one box height further away;
+      // pick the one no line runs through, preferring close spots and (on a tie) the side the own line doesn't come from
+      const prev = s.points.at(-2)
+      const fromAbove = prev !== undefined && geo.y(prev.y) < py
+      const options = [
+        { top: py - GAP - BOX_H, pref: fromAbove ? 1 : 0 },
+        { top: py + GAP, pref: fromAbove ? 0 : 1 },
+        { top: py - GAP - 2 * BOX_H - 2, pref: 2 },
+        { top: py + GAP + BOX_H + 2, pref: 3 },
+      ]
+        .filter((o) => o.top >= 0 && o.top + BOX_H <= H - pad.b + 6)
+        .map((o) => ({ ...o, cross: crossings(x - BOX_W + 6, x + 6, o.top) }))
+        .sort((a, b) => a.cross - b.cross || a.pref - b.pref)
+      return { s, r: Math.round(r), x, top: options[0]?.top ?? py - GAP - BOX_H }
+    })
+    .filter((x) => x !== null)
+    .sort((a, b) => a.top - b.top)
+  // push boxes apart when lines end close together
+  for (let i = 1; i < trends.length; i++) {
+    const prev = trends[i - 1]
+    if (Math.abs(trends[i].x - prev.x) < 60 && trends[i].top - prev.top < BOX_H + 2) trends[i].top = prev.top + BOX_H + 2
+  }
+  const trendText = (r: number) => (
+    <>
+      {r > 0 ? '▲' : r < 0 ? '▼' : '▶'} {r > 0 ? '+' : ''}
+      {fmtNum(r, 0)} %
+    </>
+  )
+  const trendCls = (r: number) => `trend ${r > 0 ? 'up' : r < 0 ? 'down' : ''}`
+  const single = series.length === 1 ? trends[0] : undefined
+
   return (
     <div className="chart">
       <div className="chart-readout">
@@ -76,27 +137,10 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           <span>&nbsp;</span>
         )}
         </div>
-        {!labelled && (
-          <div className="trends">
-            {series.map((s) => {
-              const p = trendPct(s.points)
-              if (p === null) return null
-              const r = Math.round(p)
-              const dir = r > 0 ? 'up' : r < 0 ? 'down' : 'flat'
-              return (
-                <span
-                  key={s.side}
-                  className={`trend ${dir}`}
-                  title={t('stats.trendHint')}
-                  aria-label={`${t('stats.trendHint')}: ${r > 0 ? '+' : ''}${r} %`}
-                >
-                  {series.length > 1 && <i style={{ background: colorOf(s) }} />}
-                  {dir === 'up' ? '▲' : dir === 'down' ? '▼' : '▶'} {r > 0 ? '+' : ''}
-                  {fmtNum(r, 0)} %
-                </span>
-              )
-            })}
-          </div>
+        {single && (
+          <span className={`${trendCls(single.r)} corner`} title={t('stats.trendHint')}>
+            {trendText(single.r)}
+          </span>
         )}
       </div>
       <div className="chart-plot">
@@ -155,6 +199,21 @@ export function LineChart({ series, unit, height = 200 }: { series: Series[]; un
           )
         })}
       </svg>
+      {!single &&
+        trends.map(({ s, r, x, top }) => (
+          <span
+            key={'trend' + (s.key ?? s.side)}
+            className={`${trendCls(r)} at-point`}
+            title={t('stats.trendHint')}
+            style={{
+              left: `${(x / W) * 100}%`,
+              top: `${(top / H) * 100}%`,
+              ['--line-color' as string]: colorOf(s),
+            }}
+          >
+            {trendText(r)}
+          </span>
+        ))}
       {hovP && hovS && (
         <div
           className={`chart-tip ${geo.x(hovP.t) > W * 0.6 ? 'left' : ''}`}

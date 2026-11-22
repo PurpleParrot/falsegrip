@@ -9,9 +9,9 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 
 - **UI-Sprache ist Deutsch, Übungsnamen sind Englisch.** Alle UI-Texte liegen zentral in `src/i18n.ts`.
 - **Mit dem Nutzer auf Deutsch sprechen.**
-- **Ablauf:** Code ändern, `npm test` laufen lassen, im Browser-Pane testen (`localhost:5173`, mobile Viewport), committen, auf `main` pushen. GitHub Actions deployt dann auf Pages.
+- **Ablauf:** Code ändern, `npm test` laufen lassen, im Browser-Pane testen (`localhost:5173`, mobile Viewport). **Dann auf die Freigabe des Nutzers warten.** Erst danach committen und auf `main` pushen. GitHub Actions deployt dann auf Pages.
+  - **Commit, Push und Deploy nur nach ausdrücklicher Freigabe** (Wunsch des Nutzers seit 22.11.2026). Nicht von selbst committen oder pushen.
   - Den Deploy mit `gh run watch <id>` abwarten.
-  - Dieser Ablauf ist mit dem Nutzer abgesprochen. Pushen braucht keine Extra-Nachfrage.
 - **Commits:**
   - Git-Identität ist die noreply-Adresse. Private Daten des Nutzers kommen nie in Commits oder externe Dienste.
   - **Im Projektordner liegen persönliche Backups des Nutzers** (Ordner `BACKUP…/`, Dateien `falsegrip-backup-*.json`). Das Repo ist öffentlich: Diese Dateien dürfen **niemals** committet, hochgeladen oder an externe Dienste geschickt werden. `.gitignore` sperrt sie aus. Vor jedem Commit `git status` prüfen und Dateien gezielt hinzufügen, nicht blind `git add -A`. Für Tests nie das echte Backup verwenden, sondern erfundene Daten.
@@ -86,7 +86,11 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - Ohne eingetragenes Körpergewicht zeigen Volumen und Gesamt einen Hinweis.
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
-- **Trend-Badge** oben rechts in der Chart-Karte (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): Veränderung vom ersten zum letzten Punkt im gewählten Zeitraum in %, ▲ in Akzentfarbe, ▼ grau. Bei L/R ein Badge pro Seite. Kein Badge bei weniger als 2 Punkten, Startwert 0 oder beschrifteten Serien (Vergleich, Muskelgruppen).
+- **Trend** (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): „▲ +25 %“ = Veränderung vom ersten zum letzten Punkt im gewählten Zeitraum. Steigerung grün (`--up`), Rückgang rot (`--down`); beide Tokens gibt es für dunkle Themes und für Weiß & Blau.
+  - **Eine Linie:** kleines Badge oben rechts in der Chart-Karte (`.trend.corner`).
+  - **Mehrere Linien** (L/R, Vergleich mehrerer Übungen – vom Nutzer viel genutzt –, Muskelgruppen): kleiner Kasten am letzten Punkt jeder Linie (`.trend.at-point`), Rahmen in der Linienfarbe, mit der Linienfarbe zu 22 % gefüllt.
+  - Platzierung: Kandidaten direkt über/unter dem Punkt und eine Kastenhöhe weiter weg. Gewählt wird der, durch den am wenigsten Linie läuft (`crossings`), bei Gleichstand die Seite, von der die eigene Linie nicht kommt. Danach werden überlappende Kästen auseinandergeschoben.
+  - Keine Anzeige bei weniger als 2 Punkten oder Startwert 0.
 - **Trainingshäufigkeit** (`trainingFrequency` in `src/stats.ts`, Zeile `FrequencyLine` unter dem Chart): „Ø x pro Woche · Ø y pro Monat“.
   - Gilt immer für die letzten 365 Tage, unabhängig vom gewählten Zeitraum. Liegt das erste passende Training später, wird ab diesem Training gerechnet („seit 25. Sept.“), mindestens aber über 7 Tage.
   - In „Gesamt“ zählen alle Trainings mit Inhalt, in der Übungsansicht nur Trainings mit Sätzen dieser Übung bzw. Stufe. Leere Trainings zählen nicht.
