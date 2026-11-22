@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketPoints, bucketStart, regression, trendPct } from './stats'
+import { bucketPoints, bucketStart, effectiveBucket, regression, trendPct } from './stats'
 
 const DAY = 86400000
 const pts = (...ys: number[]) => ys.map((y, i) => ({ t: i * DAY, y, sessionId: String(i) }))
@@ -50,5 +50,22 @@ describe('bucketPoints', () => {
     const b = bucketPoints([p(9, 1, 10), p(9, 31, 14), p(10, 1, 3)], 'month')
     expect(b.map((x) => x.y)).toEqual([12, 3])
     expect(new Date(b[1].from!).getMonth()).toBe(10)
+  })
+})
+
+describe('effectiveBucket', () => {
+  const mon = new Date(2026, 0, 5, 18).getTime() // Mon 5 Jan 2026
+  const at = (...days: number[]) => days.map((d) => ({ t: mon + d * DAY, y: 1, sessionId: String(d) }))
+  it('shows every training while there is less than 3 weeks of data', () => {
+    expect(effectiveBucket(at(0, 2, 4, 9), 'week')).toBeUndefined()
+    expect(effectiveBucket(at(0, 2, 4, 9), 'month')).toBeUndefined()
+  })
+  it('aggregates by week from 3 weeks on, also in the year view while months are few', () => {
+    expect(effectiveBucket(at(0, 7, 14), 'week')).toBe('week')
+    expect(effectiveBucket(at(0, 7, 14, 30), 'month')).toBe('week')
+  })
+  it('aggregates by month from 3 months on, but only when the range allows it', () => {
+    expect(effectiveBucket(at(0, 40, 70), 'month')).toBe('month')
+    expect(effectiveBucket(at(0, 40, 70), 'week')).toBe('week')
   })
 })

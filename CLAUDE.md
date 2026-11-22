@@ -86,7 +86,7 @@ Persönlicher Calisthenics- und Gym-Tracker als PWA, ersetzt RepCount. Grundlage
 - Ohne eingetragenes Körpergewicht zeigen Volumen und Gesamt einen Hinweis.
 - **Vergleich:** Mehrere Übungen in einem Chart, nur bei gleichen Dimensionen.
 - **Ansicht „Gesamt“:** Volumen pro Training und pro Muskelgruppe. Die primäre Gruppe zählt 100 %, Nebengruppen 50 %.
-- **Glättung im Chart** (`bucketPoints`, `bucketFor` in `src/stats.ts`, Prop `bucket` von `LineChart`): Bei 1 M und 3 M ein Punkt pro Woche (ab Montag), bei 1 J und Alles einer pro Monat, jeweils der Mittelwert. Antippen zeigt „Ø … · Woche ab 3. Nov. · 3 Trainings“. Die Kästen „Bestwert“, „Trainings“ usw. rechnen weiter mit den einzelnen Trainings.
+- **Glättung im Chart** (`bucketPoints`, `bucketFor` in `src/stats.ts`, Prop `bucket` von `LineChart`): Bei 1 M und 3 M höchstens ein Punkt pro Woche (ab Montag), bei 1 J und Alles höchstens einer pro Monat, jeweils der Mittelwert. Mit wenig Daten stuft `effectiveBucket` herunter: Monate erst ab Daten in 3 verschiedenen Monaten (`MIN_BUCKETS`), sonst Wochen ab 3 verschiedenen Wochen, sonst jedes Training einzeln. Antippen zeigt „Ø … · Woche ab 3. Nov. · 3 Trainings“. Die Kästen „Bestwert“, „Trainings“ usw. rechnen weiter mit den einzelnen Trainings.
 - **Trend** (`trendPct` in `src/stats.ts`, gerendert in `LineChart`): „▲ +25 %“ = Veränderung im gewählten Zeitraum, berechnet aus den einzelnen Trainings, nicht aus den Wochen-/Monatsmitteln.
   - Ab 10 Trainings (`REGRESSION_MIN`): Regressionsgerade, Wert am letzten gegenüber dem ersten Training. Die Gerade wird dezent gestrichelt eingezeichnet (`.reg-line`).
   - Darunter: Ø letztes Drittel gegenüber Ø erstem Drittel (bei 2–5 Trainings also letzter gegenüber erstem Wert).

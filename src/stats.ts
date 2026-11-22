@@ -243,6 +243,20 @@ export type Bucket = 'week' | 'month'
 /** 1 M / 3 M → one point per week, 1 J / Alles → one per month. */
 export const bucketFor = (range: '1m' | '3m' | '1y' | 'all'): Bucket => (range === '1m' || range === '3m' ? 'week' : 'month')
 
+/** Aggregate only once the data covers at least this many weeks / months. */
+export const MIN_BUCKETS = 3
+
+/**
+ * How coarse the chart really aggregates: `max` comes from the range tab, but with little data
+ * it steps down (month → week → every training), e.g. a new user sees each training at first.
+ */
+export function effectiveBucket(points: Point[], max: Bucket): Bucket | undefined {
+  const distinct = (b: Bucket) => new Set(points.map((p) => bucketStart(p.t, b))).size
+  if (max === 'month' && distinct('month') >= MIN_BUCKETS) return 'month'
+  if (distinct('week') >= MIN_BUCKETS) return 'week'
+  return undefined
+}
+
 /** Start of the week (Monday 0:00) or month containing t, local time. */
 export function bucketStart(t: number, bucket: Bucket): number {
   const d = new Date(t)

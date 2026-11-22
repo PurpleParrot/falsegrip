@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react'
 import { fmtDateShort, fmtMonth, fmtNum } from '../format'
 import { t } from '../i18n'
-import { bucketPoints, regression, REGRESSION_MIN, trendPct, type Bucket, type Point, type Series } from '../stats'
+import { bucketPoints, effectiveBucket, regression, REGRESSION_MIN, trendPct, type Bucket, type Point, type Series } from '../stats'
 
 const COLORS: Record<string, string> = { B: 'var(--accent)', L: 'var(--accent)', R: 'var(--accent-2)' }
 
 /**
  * Simple, gently animated SVG line chart. Tap to inspect a point.
- * `bucket`: draw one point per week / month (mean). Trend and regression line always use the individual trainings.
+ * `bucket`: at most one point per week / month (mean); with less data it shows weeks or every training. Trend and regression line always use the individual trainings.
  */
 export function LineChart({
   series: raw,
   unit,
   height = 200,
-  bucket,
+  bucket: maxBucket,
 }: {
   series: Series[]
   unit: string
@@ -22,6 +22,8 @@ export function LineChart({
 }) {
   const W = 340
   const H = height
+  // with little data, step down from the range's bucket (month → week → every training)
+  const bucket = maxBucket ? effectiveBucket(raw.flatMap((s) => s.points), maxBucket) : undefined
   const series = useMemo(
     () => (bucket ? raw.map((s) => ({ ...s, points: bucketPoints(s.points, bucket) })) : raw),
     [raw, bucket],
